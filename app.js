@@ -13,6 +13,7 @@
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
+  const auth = firebase.auth();
 
   // ── ESTADO ──
   let CREDS = { user: 'admin', pass: '1234' };
@@ -27,10 +28,61 @@
   };
   let clientes = {};
   let filtroActual = 'todos';
-  let clienteEditandoId = null;   // null = nuevo cliente
+  let clienteEditandoId = null;
   let clienteRenovandoId = null;
   let autoGuardarTimer = null;
   let chartMesInst = null;
+  let currentUser = null; // { name, email, photo, uid, loginType }
+
+  // ── TEMA / COLOR ──
+  function applyThemeColor(hex, preview) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    // Generar variante más oscura
+    const darken = (v, f) => Math.max(0, Math.min(255, Math.round(v * f)));
+    const dark = `#${darken(r,.75).toString(16).padStart(2,'0')}${darken(g,.75).toString(16).padStart(2,'0')}${darken(b,.75).toString(16).padStart(2,'0')}`;
+    const light = `rgba(${r},${g},${b},0.15)`;
+    document.documentElement.style.setProperty('--gold', hex);
+    document.documentElement.style.setProperty('--gold2', hex);
+    document.documentElement.style.setProperty('--gold-dark', dark);
+    // Actualiza picker y hex display si existen
+    const picker = document.getElementById('custom-color-picker');
+    const hexDisp = document.getElementById('color-hex-display');
+    if (picker) picker.value = hex;
+    if (hexDisp) hexDisp.textContent = hex.toUpperCase();
+    // Marca preset activo
+    document.querySelectorAll('.color-preset').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === hex);
+    });
+  }
+  window.applyThemeColor = applyThemeColor;
+
+  window.selectColorPreset = function(hex, btn) {
+    applyThemeColor(hex, true);
+  };
+
+  function loadUserPrefs() {
+    try {
+      const prefs = JSON.parse(localStorage.getItem('gymUserPrefs') || '{}');
+      if (prefs.themeColor) applyThemeColor(prefs.themeColor, false);
+      return prefs;
+    } catch(e) { return {}; }
+  }
+
+  function saveUserPrefs(prefs) {
+    localStorage.setItem('gymUserPrefs', JSON.stringify(prefs));
+  }
+
+  // Cargar prefs al inicio
+  loadUserPrefs();
+
+  // ── LOGIN TABS ──
+  window.switchLoginTab = function(tab) {
+    document.querySelectorAll('.login-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='manual')||(i===1&&tab==='google')));
+    document.getElementById('tab-manual').style.display = tab === 'manual' ? 'block' : 'none';
+    document.getElementById('tab-google').style.display = tab === 'google' ? 'block' : 'none';
+  };
 
   // ── FIREBASE LISTENERS ──
   db.ref('gymConfig').on('value', snap => {
@@ -52,7 +104,26 @@
     if (v) CREDS = v;
   });
 
-  // ── LOGIN ──
+  // ── AUTH STATE ──
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      // Viene de Google Sign-In
+      currentUser = {
+        name: user.displayName || 'Usuario',
+        email: user.email || '',
+        photo: user.photoURL || '',
+        uid: user.uid,
+        loginType: 'google'
+      };
+      // Mezcla con prefs guardadas localmente
+      const prefs = loadUserPrefs();
+      if (prefs.displayName) currentUser.name = prefs.displayName;
+      if (prefs.photoData) currentUser.photo = prefs.photoData;
+      entrarAlApp();
+    }
+  });
+
+  // ── LOGIN MANUAL ──
   document.getElementById('btn-login').addEventListener('click', doLogin);
   document.getElementById('inp-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
@@ -60,10 +131,15 @@
     const u = document.getElementById('inp-user').value.trim();
     const p = document.getElementById('inp-pass').value;
     if (u === CREDS.user && p === CREDS.pass) {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app').classList.add('visible');
-      checkNotifPermission();
-      renderStats();
+      const prefs = loadUserPrefs();
+      currentUser = {
+        name: prefs.displayName || u,
+        email: '',
+        photo: prefs.photoData || '',
+        uid: 'manual_' + u,
+        loginType: 'manual'
+      };
+      entrarAlApp();
     } else {
       const err = document.getElementById('login-err');
       err.classList.add('show');
@@ -71,11 +147,139 @@
     }
   }
 
-  document.getElementById('btn-logout').addEventListener('click', () => {
+  // ── LOGIN GOOGLE ──
+  document.getElementById('btn-google-login').addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => {
+      alert('Error al iniciar sesión con Google: ' + err.message);
+    });
+  });
+
+  // ── ENTRAR AL APP ──
+  function entrarAlApp() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    updateTopbarAvatar();
+    checkNotifPermission();
+    renderStats();
+  }
+
+  function updateTopbarAvatar() {
+    if (!currentUser) return;
+    const img = document.getElementById('topbar-avatar-img');
+    const initials = document.getElementById('topbar-avatar-initials');
+    if (currentUser.photo) {
+      img.src = currentUser.photo;
+      img.style.display = 'block';
+      initials.style.display = 'none';
+    } else {
+      img.style.display = 'none';
+      initials.textContent = (currentUser.name || '?').split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();
+      initials.style.display = 'flex';
+    }
+    // Menú
+    const menuName = document.getElementById('menu-user-name');
+    const menuEmail = document.getElementById('menu-user-email');
+    const menuAvatar = document.getElementById('menu-avatar-wrap');
+    if (menuName) menuName.textContent = currentUser.name;
+    if (menuEmail) menuEmail.textContent = currentUser.email || (currentUser.loginType === 'manual' ? 'Acceso local' : '');
+    if (menuAvatar) {
+      if (currentUser.photo) {
+        menuAvatar.innerHTML = `<img src="${currentUser.photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">`;
+      } else {
+        menuAvatar.textContent = (currentUser.name||'?').split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();
+      }
+    }
+  }
+
+  // ── MENÚ USUARIO ──
+  window.toggleUserMenu = function() {
+    const menu = document.getElementById('user-menu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  };
+
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('user-menu');
+    const avatar = document.getElementById('topbar-avatar');
+    if (menu && !menu.contains(e.target) && !avatar.contains(e.target)) {
+      menu.style.display = 'none';
+    }
+  });
+
+  window.irAConfigUsuario = function() {
+    document.getElementById('user-menu').style.display = 'none';
+    abrirModalUserConfig();
+  };
+
+  // ── MODAL CONFIG USUARIO ──
+  window.abrirModalUserConfig = function() {
+    const prefs = loadUserPrefs();
+    const themeColor = prefs.themeColor || '#D4AF37';
+
+    // Nombre
+    document.getElementById('user-display-name').value = currentUser ? currentUser.name : '';
+
+    // Avatar preview
+    updateAvatarPreview();
+
+    // Color
+    applyThemeColor(themeColor, false);
+
+    document.getElementById('modal-user-config').classList.add('open');
+  };
+
+  function updateAvatarPreview() {
+    const preview = document.getElementById('avatar-preview');
+    if (!preview) return;
+    if (currentUser && currentUser.photo) {
+      preview.innerHTML = `<img src="${currentUser.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else {
+      preview.textContent = currentUser ? (currentUser.name||'?').split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase() : '?';
+    }
+  }
+
+  window.handleAvatarChange = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const data = e.target.result;
+      if (currentUser) currentUser.photo = data;
+      updateAvatarPreview();
+    };
+    reader.readAsDataURL(file);
+  };
+
+  window.cerrarModalUserConfig = function() {
+    document.getElementById('modal-user-config').classList.remove('open');
+  };
+
+  window.guardarConfigUsuario = function() {
+    const name = document.getElementById('user-display-name').value.trim();
+    const themeColor = document.getElementById('custom-color-picker').value;
+
+    const prefs = loadUserPrefs();
+    if (name) { prefs.displayName = name; if (currentUser) currentUser.name = name; }
+    prefs.themeColor = themeColor;
+    if (currentUser && currentUser.photo) prefs.photoData = currentUser.photo;
+
+    saveUserPrefs(prefs);
+    applyThemeColor(themeColor, false);
+    updateTopbarAvatar();
+    cerrarModalUserConfig();
+  };
+
+  // ── LOGOUT ──
+  window.doLogout = function() {
+    auth.signOut().catch(()=>{});
     document.getElementById('app').classList.remove('visible');
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('inp-pass').value = '';
-  });
+    document.getElementById('user-menu').style.display = 'none';
+    currentUser = null;
+  };
+
+  document.getElementById('btn-logout').addEventListener('click', doLogout);
 
   // ── TABS ──
   document.querySelectorAll('.tab').forEach(t => {
@@ -151,18 +355,14 @@
     if (currentVal) sel.value = currentVal;
   }
 
-  // Al cambiar el plan: auto-rellena el precio con el del plan pero deja editarlo
   window.onPlanChange = function () {
     const planNombre = document.getElementById('f-plan').value;
     const plan = gymConfig.planes.find(p => p.nombre === planNombre);
-    if (plan) {
-      document.getElementById('f-valor').value = plan.precio;
-    }
+    if (plan) document.getElementById('f-valor').value = plan.precio;
     autoGuardar();
   };
 
   // ── GUARDADO EN TIEMPO REAL ──
-  // Actualiza el indicador visual
   function setSaveStatus(estado, texto) {
     const ind = document.getElementById('save-indicator');
     const txt = document.getElementById('save-text');
@@ -171,48 +371,31 @@
     txt.textContent = texto;
   }
 
-  // Se llama desde cada campo del formulario (oninput / onchange)
   window.autoGuardar = function () {
     const nombre = document.getElementById('f-nombre')?.value.trim();
-    // Solo guarda automáticamente si hay nombre (campo mínimo)
-    if (!nombre) {
-      setSaveStatus('', 'Escribe el nombre para guardar');
-      return;
-    }
-
+    if (!nombre) { setSaveStatus('', 'Escribe el nombre para guardar'); return; }
     const plan = document.getElementById('f-plan')?.value;
     const inicio = document.getElementById('f-inicio')?.value;
-    if (!plan || !inicio) {
-      setSaveStatus('', 'Completa plan y fecha');
-      return;
-    }
-
+    if (!plan || !inicio) { setSaveStatus('', 'Completa plan y fecha'); return; }
     setSaveStatus('saving', 'Guardando…');
-
-    // Debounce: espera 800ms de inactividad antes de guardar
     clearTimeout(autoGuardarTimer);
-    autoGuardarTimer = setTimeout(() => {
-      _ejecutarGuardado(false); // false = silencioso (no cierra modal)
-    }, 800);
+    autoGuardarTimer = setTimeout(() => { _ejecutarGuardado(false); }, 800);
   };
 
-  // Botón "GUARDAR" manual: guarda de inmediato y cierra
   window.guardarClienteManual = function () {
     clearTimeout(autoGuardarTimer);
-    _ejecutarGuardado(true); // true = cierra el modal al terminar
+    _ejecutarGuardado(true);
   };
 
   function _ejecutarGuardado(cerrar) {
     const nombre = document.getElementById('f-nombre').value.trim();
     const plan = document.getElementById('f-plan').value;
     const inicio = document.getElementById('f-inicio').value;
-
     if (!nombre || !plan || !inicio) {
       setSaveStatus('error', 'Faltan campos obligatorios');
       if (cerrar) alert('Nombre, plan y fecha son obligatorios');
       return;
     }
-
     const fechaPago = calcFechaPago(inicio, plan);
     const valorRaw = document.getElementById('f-valor').value.replace(/\D/g, '');
     const data = {
@@ -226,19 +409,11 @@
       notas: document.getElementById('f-notas').value.trim(),
       registradoEn: Date.now()
     };
-
-    // Si es edición, conserva el timestamp original
     if (clienteEditandoId && clientes[clienteEditandoId]?.registradoEn) {
       data.registradoEn = clientes[clienteEditandoId].registradoEn;
     }
-
     const id = clienteEditandoId || ('c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6));
-
-    // Si es nuevo, fijamos el id para que los próximos auto-guardados actualicen el mismo registro
-    if (!clienteEditandoId) {
-      clienteEditandoId = id;
-    }
-
+    if (!clienteEditandoId) clienteEditandoId = id;
     db.ref('clientes/' + id).set(data)
       .then(() => {
         setSaveStatus('saved', '✓ Guardado');
@@ -260,7 +435,6 @@
     document.getElementById('f-notas').value = '';
     document.getElementById('f-inicio').value = getFechaHoy();
     cargarPlanesEnSelect();
-    // Precio por defecto del primer plan
     const primerPlan = gymConfig.planes[0];
     if (primerPlan) document.getElementById('f-valor').value = primerPlan.precio;
     setSaveStatus('', 'Sin cambios');
@@ -280,7 +454,6 @@
     const dias = diasRestantes(c);
     const badgeClass = est === 'activo' ? 'badge-activo' : est === 'por-vencer' ? 'badge-vence' : 'badge-vencido';
     const badgeTxt = est === 'activo' ? '✅ Al día' : est === 'por-vencer' ? `⚠️ Vence en ${dias} días` : `❌ Venció hace ${Math.abs(dias)} días`;
-
     document.getElementById('detalle-content').innerHTML = `
       <div class="detalle-header">
         <div class="detalle-avatar">${iniciales(c.nombre)}</div>
@@ -311,8 +484,11 @@
   document.getElementById('modal-cliente').addEventListener('click', function (e) {
     if (e.target === this) cerrarModalCliente();
   });
+  document.getElementById('modal-user-config').addEventListener('click', function (e) {
+    if (e.target === this) cerrarModalUserConfig();
+  });
 
-  // ── MODAL RENOVAR (con precio editable) ──
+  // ── MODAL RENOVAR ──
   window.abrirModalRenovar = function (id) {
     const c = clientes[id];
     if (!c) return;
@@ -397,7 +573,7 @@
     renderClientes();
   };
 
-  function renderClientes() {
+  window.renderClientes = function() {
     const q = (document.getElementById('search-inp')?.value || '').toLowerCase();
     let arr = Object.entries(clientes).map(([id, c]) => ({ id, ...c }));
     if (q) arr = arr.filter(c =>
@@ -410,7 +586,6 @@
       const ord = { vencido: 0, 'por-vencer': 1, activo: 2 };
       return ord[getEstado(a)] - ord[getEstado(b)];
     });
-
     const el = document.getElementById('lista-clientes');
     if (!arr.length) {
       el.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div>${q ? 'Sin resultados para "' + q + '"' : 'No hay clientes aún'}</div>`;
@@ -433,7 +608,7 @@
         </div>
       </div>`;
     }).join('');
-  }
+  };
 
   // ── STATS ──
   function renderStats() {
@@ -442,13 +617,11 @@
     const activos = arr.filter(c => getEstado(c) === 'activo').length;
     const porVencer = arr.filter(c => getEstado(c) === 'por-vencer').length;
     const vencidos = arr.filter(c => getEstado(c) === 'vencido').length;
-
     const hoy = new Date();
     const mesActual = hoy.getMonth(); const anioActual = hoy.getFullYear();
     const ingresosMes = arr
       .filter(c => { if (!c.fechaInicio) return false; const d = new Date(c.fechaInicio + 'T00:00:00'); return d.getMonth() === mesActual && d.getFullYear() === anioActual; })
       .reduce((s, c) => s + (parseInt(c.valor) || 0), 0);
-
     const mesesLabels = [];
     const mesesVals = [];
     for (let i = 5; i >= 0; i--) {
@@ -462,34 +635,16 @@
         return cd.getMonth() === m && cd.getFullYear() === y;
       }).length);
     }
-
     const planCount = {};
     arr.forEach(c => { if (c.plan) planCount[c.plan] = (planCount[c.plan] || 0) + 1; });
     const topPlanes = Object.entries(planCount).sort((a, b) => b[1] - a[1]);
     const maxPlan = topPlanes.length ? topPlanes[0][1] : 1;
-
     document.getElementById('stats-content').innerHTML = `
       <div class="metrics">
-        <div class="mcard">
-          <div class="m-lbl">Total clientes</div>
-          <div class="m-val">${total}</div>
-          <div class="m-sub">registrados</div>
-        </div>
-        <div class="mcard green">
-          <div class="m-lbl">Al día</div>
-          <div class="m-val">${activos}</div>
-          <div class="m-sub">membresías activas</div>
-        </div>
-        <div class="mcard yellow">
-          <div class="m-lbl">Por vencer</div>
-          <div class="m-val">${porVencer}</div>
-          <div class="m-sub">en 3 días o menos</div>
-        </div>
-        <div class="mcard red">
-          <div class="m-lbl">Vencidos</div>
-          <div class="m-val">${vencidos}</div>
-          <div class="m-sub">sin renovar</div>
-        </div>
+        <div class="mcard"><div class="m-lbl">Total clientes</div><div class="m-val">${total}</div><div class="m-sub">registrados</div></div>
+        <div class="mcard green"><div class="m-lbl">Al día</div><div class="m-val">${activos}</div><div class="m-sub">membresías activas</div></div>
+        <div class="mcard yellow"><div class="m-lbl">Por vencer</div><div class="m-val">${porVencer}</div><div class="m-sub">en 3 días o menos</div></div>
+        <div class="mcard red"><div class="m-lbl">Vencidos</div><div class="m-val">${vencidos}</div><div class="m-sub">sin renovar</div></div>
       </div>
       <div class="mcard" style="margin-bottom:16px">
         <div class="m-lbl">Ingresos este mes</div>
@@ -506,18 +661,17 @@
           <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
             <span style="font-size:12px;font-weight:700;color:var(--text);min-width:90px">${n}</span>
             <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden">
-              <div style="width:${Math.round(c / maxPlan * 100)}%;height:100%;background:linear-gradient(90deg,var(--gold),#B8960C);border-radius:4px"></div>
+              <div style="width:${Math.round(c / maxPlan * 100)}%;height:100%;background:var(--gold);border-radius:4px"></div>
             </div>
             <span style="font-size:12px;font-weight:700;color:var(--gold);min-width:24px;text-align:right">${c}</span>
           </div>`).join('') : '<div class="empty-state" style="padding:20px 0">Sin datos aún</div>'}
       </div>`;
-
     if (chartMesInst) { chartMesInst.destroy(); chartMesInst = null; }
     const ctx = document.getElementById('chartMes');
     if (ctx) {
       chartMesInst = new Chart(ctx, {
         type: 'bar',
-        data: { labels: mesesLabels, datasets: [{ data: mesesVals, backgroundColor: '#D4AF37', borderRadius: 6, borderSkipped: false }] },
+        data: { labels: mesesLabels, datasets: [{ data: mesesVals, backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--gold').trim() || '#D4AF37', borderRadius: 6, borderSkipped: false }] },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
@@ -536,7 +690,6 @@
       .map(([id, c]) => ({ id, ...c }))
       .filter(c => getEstado(c) !== 'activo')
       .sort((a, b) => getEstado(a) === 'vencido' && getEstado(b) !== 'vencido' ? -1 : 1);
-
     const el = document.getElementById('alertas-content');
     if (!arr.length) {
       el.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div>¡Todo al día! No hay alertas pendientes</div>`;
@@ -599,6 +752,14 @@
     });
   }
 
+  window.pedirNotifPermiso = function () {
+    if (!('Notification' in window)) { alert('Tu navegador no soporta notificaciones'); return; }
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') { programarNotificaciones(); alert('✅ ¡Notificaciones activadas!'); }
+      else alert('❌ Permiso denegado');
+    });
+  };
+
   // ── CONFIG ──
   function renderConfig() {
     document.getElementById('config-content').innerHTML = `
@@ -632,6 +793,12 @@
       </div>
 
       <div class="config-card">
+        <h3>👤 Mi perfil y apariencia</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Cambia tu nombre de usuario, foto y color de la app.</p>
+        <button class="btn-gold" onclick="abrirModalUserConfig()">🎨 Abrir configuración de usuario</button>
+      </div>
+
+      <div class="config-card">
         <h3>🔐 Cambiar contraseña</h3>
         <div class="form-group" style="margin-bottom:12px">
           <label class="form-label">Nueva contraseña</label>
@@ -646,14 +813,6 @@
         <button class="notif-perm-btn" onclick="pedirNotifPermiso()">🔔 Activar notificaciones</button>
       </div>`;
   }
-
-  window.pedirNotifPermiso = function () {
-    if (!('Notification' in window)) { alert('Tu navegador no soporta notificaciones'); return; }
-    Notification.requestPermission().then(p => {
-      if (p === 'granted') { programarNotificaciones(); alert('✅ ¡Notificaciones activadas!'); }
-      else alert('❌ Permiso denegado');
-    });
-  };
 
   window.guardarConfigGym = function () {
     const nombre = document.getElementById('cfg-nombre').value.trim();
