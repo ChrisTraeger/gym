@@ -306,3 +306,41 @@ select.form-inp { cursor: pointer; }
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── LOGIN DIVIDER ── */
+.login-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 18px 0; color: var(--muted); font-size: 12px;
+}
+.login-divider::before, .login-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── GOOGLE BTN mejorado ── */
+.btn-google {
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 14px 20px;
+  background: #fff; color: #333;
+  border: none; border-radius: 10px;
+  font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  margin-bottom: 4px;
+}
+.btn-google:active { transform: scale(0.98); opacity: 0.9; }
+.btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── MODAL REGISTRO GYM ── */
+.modal-registro {
+  text-align: center;
+}
+.registro-welcome { margin-bottom: 24px; }
+.registro-icon { font-size: 52px; margin-bottom: 8px; }
+.registro-desc {
+  font-size: 14px; color: var(--muted); line-height: 1.5;
+  margin-top: 8px;
+}
+.registro-hint {
+  font-size: 11px; color: var(--muted);
+  margin-top: 4px; text-align: center;
+}

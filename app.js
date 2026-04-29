@@ -77,13 +77,6 @@
   // Cargar prefs al inicio
   loadUserPrefs();
 
-  // ── LOGIN TABS ──
-  window.switchLoginTab = function(tab) {
-    document.querySelectorAll('.login-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='manual')||(i===1&&tab==='google')));
-    document.getElementById('tab-manual').style.display = tab === 'manual' ? 'block' : 'none';
-    document.getElementById('tab-google').style.display = tab === 'google' ? 'block' : 'none';
-  };
-
   // ── ACTUALIZAR NOMBRE GYM EN TODA LA UI ──
   function updateGymNameUI(nombre) {
     const n = (nombre || 'GYM').toUpperCase();
@@ -97,57 +90,59 @@
     document.title = n + ' — Panel de Control';
   }
 
-  // Preview en tiempo real desde el input de setup
-  window.previewGymName = function(val) {
-    updateGymNameUI(val || 'GYM');
-    // Guardar en localStorage inmediatamente para persistir
+  // ── REGISTRO GYM (modal primer ingreso) ──
+  let pendingEntrarAlApp = false;
+
+  function mostrarRegistroGymSiNecesario(callback) {
+    // Si ya hay nombre en Firebase o en localStorage, no mostrar
+    const localNombre = gymConfig.nombre && gymConfig.nombre !== 'MI GYM' ? gymConfig.nombre : null;
+    const prefs = loadUserPrefs();
+    const localSaved = prefs.gymNombreLocal;
+
+    if (localNombre || localSaved) {
+      // Ya tiene nombre, entrar directo
+      if (localSaved) updateGymNameUI(localSaved);
+      callback();
+      return;
+    }
+    // Primer uso: mostrar modal de registro
+    const overlay = document.getElementById('modal-registro-gym');
+    overlay.classList.add('open');
+    // Guardar callback para llamar al confirmar
+    window._registroCallback = callback;
+  }
+
+  window.confirmarRegistroGym = function() {
+    const nombre = document.getElementById('registro-gym-name').value.trim();
+    if (!nombre) {
+      document.getElementById('registro-gym-name').focus();
+      document.getElementById('registro-gym-name').style.borderColor = 'var(--red)';
+      setTimeout(() => document.getElementById('registro-gym-name').style.borderColor = '', 1500);
+      return;
+    }
+    gymConfig.nombre = nombre;
+    db.ref('gymConfig').update({ nombre });
     try {
       const prefs = JSON.parse(localStorage.getItem('gymUserPrefs') || '{}');
-      prefs.gymNombreLocal = val;
+      prefs.gymNombreLocal = nombre;
       localStorage.setItem('gymUserPrefs', JSON.stringify(prefs));
     } catch(e) {}
+    updateGymNameUI(nombre);
+    document.getElementById('modal-registro-gym').classList.remove('open');
+    if (window._registroCallback) window._registroCallback();
   };
 
-  // Selección de color desde setup del login
-  window.selectSetupColor = function(hex, btn, isCustom) {
-    applyThemeColor(hex, true);
-    // Marcar activo
-    document.querySelectorAll('.pal-btn').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-    // Guardar en prefs locales para persistir en la sesión
-    try {
-      const prefs = JSON.parse(localStorage.getItem('gymUserPrefs') || '{}');
-      prefs.themeColor = hex;
-      localStorage.setItem('gymUserPrefs', JSON.stringify(prefs));
-    } catch(e) {}
-  };
-
-  // Inicializar el setup card con valores guardados
-  (function initSetupCard() {
-    try {
-      const prefs = JSON.parse(localStorage.getItem('gymUserPrefs') || '{}');
-      if (prefs.gymNombreLocal) {
-        const inp = document.getElementById('setup-gym-name');
-        if (inp) inp.value = prefs.gymNombreLocal;
-        updateGymNameUI(prefs.gymNombreLocal);
-      }
-      if (prefs.themeColor) {
-        // Marcar preset activo en setup palette
-        document.querySelectorAll('.pal-btn').forEach(b => {
-          b.classList.toggle('active', b.dataset.color === prefs.themeColor);
-        });
-      }
-    } catch(e) {}
-  })();
+  // Enter en el input también confirma
+  document.getElementById('registro-gym-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmarRegistroGym();
+  });
 
   // ── FIREBASE LISTENERS ──
   db.ref('gymConfig').on('value', snap => {
     const v = snap.val();
     if (v) gymConfig = { ...gymConfig, ...v };
-    // Si el gym tiene nombre en Firebase, actualizamos la UI (pero respetando lo del input de setup si está activo)
-    const setupInput = document.getElementById('setup-gym-name');
-    const localName = setupInput && setupInput.value.trim();
-    updateGymNameUI(localName || gymConfig.nombre || 'GYM');
+    const prefs = loadUserPrefs();
+    updateGymNameUI(prefs.gymNombreLocal || gymConfig.nombre || 'GYM');
     cargarPlanesEnSelect();
     if (document.getElementById('pane-config').classList.contains('active')) renderConfig();
   });
@@ -167,7 +162,6 @@
   // ── AUTH STATE ──
   auth.onAuthStateChanged(user => {
     if (user) {
-      // Viene de Google Sign-In
       currentUser = {
         name: user.displayName || 'Usuario',
         email: user.email || '',
@@ -175,11 +169,10 @@
         uid: user.uid,
         loginType: 'google'
       };
-      // Mezcla con prefs guardadas localmente
       const prefs = loadUserPrefs();
       if (prefs.displayName) currentUser.name = prefs.displayName;
       if (prefs.photoData) currentUser.photo = prefs.photoData;
-      entrarAlApp();
+      mostrarRegistroGymSiNecesario(entrarAlApp);
     }
   });
 
@@ -199,7 +192,7 @@
         uid: 'manual_' + u,
         loginType: 'manual'
       };
-      entrarAlApp();
+      mostrarRegistroGymSiNecesario(entrarAlApp);
     } else {
       const err = document.getElementById('login-err');
       err.classList.add('show');
@@ -209,22 +202,21 @@
 
   // ── LOGIN GOOGLE ──
   document.getElementById('btn-google-login').addEventListener('click', () => {
+    const btn = document.getElementById('btn-google-login');
+    btn.disabled = true;
+    btn.textContent = 'Conectando…';
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(err => {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.2 30.2 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.9 6.1C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.6h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-8.1 6.2C6.7 42.6 14.7 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Continuar con Google`;
       alert('Error al iniciar sesión con Google: ' + err.message);
     });
   });
 
   // ── ENTRAR AL APP ──
   function entrarAlApp() {
-    // Si el usuario escribió un nombre en el setup, guardarlo en Firebase
-    const setupInput = document.getElementById('setup-gym-name');
-    const localName = setupInput && setupInput.value.trim();
-    if (localName && localName !== gymConfig.nombre) {
-      gymConfig.nombre = localName;
-      db.ref('gymConfig').update({ nombre: localName });
-    }
-    updateGymNameUI(localName || gymConfig.nombre || 'GYM');
+    const prefs = loadUserPrefs();
+    updateGymNameUI(prefs.gymNombreLocal || gymConfig.nombre || 'GYM');
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('visible');
     updateTopbarAvatar();
