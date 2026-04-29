@@ -1003,7 +1003,7 @@
     // Calcular totales por mes (últimos 6 meses)
     const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     const resumenMeses = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 5; i >= 0; i--) {
       const d = new Date(anioActual, mesActual - i, 1);
       const m = d.getMonth(); const y = d.getFullYear();
       const pagosDelMes = arr.filter(p => {
