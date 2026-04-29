@@ -408,4 +408,91 @@ select.form-inp { cursor: pointer; }
 }
 .menu-item:hover, .menu-item:active { background: var(--dark4); }
 .menu-item-red { color: var(--red); }
-.menu-item-red:hover, .menu-item-red:active 
+.menu-item-red:hover, .menu-item-red:active { background: rgba(239,68,68,0.08); }
+
+/* ── AVATAR EDIT (modal perfil) ── */
+.avatar-edit-wrap {
+  position: relative; display: inline-block; cursor: pointer;
+}
+.avatar-preview-big {
+  width: 80px; height: 80px; border-radius: 50%; margin: 0 auto;
+  background: linear-gradient(135deg, var(--gold), #8B6914);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: #0a0a0a;
+  overflow: hidden;
+}
+.avatar-edit-overlay {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+  opacity: 0; transition: opacity 0.2s;
+}
+.avatar-edit-wrap:hover .avatar-edit-overlay { opacity: 1; }
+
+/* ── COLOR PRESETS (modal perfil) ── */
+.color-presets {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.color-preset {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer; transition: transform 0.15s, border-color 0.15s;
+}
+.color-preset:hover { transform: scale(1.15); }
+.color-preset.active { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); }
+
+/* ── EXPORT BAR ── */
+.export-bar {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.btn-export {
+  flex: 1; padding: 10px 12px;
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--gold);
+  font-family: 'Barlow', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+}
+.btn-export:active { background: var(--dark4); }
+.btn-export-pdf { color: var(--red); }
+
+/* ── CAJA ── */
+.caja-header { display: flex; gap: 10px; margin-bottom: 4px; }
+
+.caja-meses {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px;
+  scrollbar-width: none;
+}
+.caja-meses::-webkit-scrollbar { display: none; }
+.caja-mes-btn {
+  flex-shrink: 0; padding: 8px 14px;
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 20px; color: var(--muted);
+  font-family: 'Barlow', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; text-align: center; line-height: 1.4;
+  transition: all 0.15s;
+}
+.caja-mes-btn.active {
+  background: var(--gold); color: #0a0a0a; border-color: var(--gold);
+}
+
+.pago-card {
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+}
+.pago-avatar {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--gold), #8B6914);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 16px; color: #0a0a0a;
+}
+.pago-info { flex: 1; min-width: 0; }
+.pago-nombre { font-size: 14px; font-weight: 700; color: var(--text); }
+.pago-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.pago-tipo-nuevo { color: var(--green); font-weight: 700; }
+.pago-tipo-renovacion { color: var(--gold); font-weight: 700; }
+.pago-valor {
+  font-family: 'Bebas Neue', sans-serif; font-size: 20px;
+  color: var(--green); flex-shrink: 0;
+}

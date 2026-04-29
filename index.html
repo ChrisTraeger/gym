@@ -15,6 +15,7 @@
 
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -104,6 +105,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="stats">📊 Stats</button>
     <button class="tab" data-tab="clientes">👥 Clientes</button>
+    <button class="tab" data-tab="caja">💰 Caja</button>
     <button class="tab" data-tab="alertas">🔔 Alertas</button>
     <button class="tab" data-tab="config">⚙️ Config</button>
   </div>
@@ -124,7 +126,15 @@
         <button class="filter-btn f-yellow" data-filter="por-vencer" onclick="setFiltro(this,'por-vencer')">⚠️ Por vencer</button>
         <button class="filter-btn f-red" data-filter="vencido" onclick="setFiltro(this,'vencido')">❌ Vencidos</button>
       </div>
+      <div class="export-bar">
+        <button class="btn-export" onclick="exportarExcel()">📊 Exportar Excel</button>
+        <button class="btn-export btn-export-pdf" onclick="exportarPDF()">📄 Exportar PDF</button>
+      </div>
       <div id="lista-clientes"></div>
+    </div>
+    <!-- CAJA -->
+    <div class="pane" id="pane-caja">
+      <div id="caja-content"><div class="empty-state"><div class="empty-icon">💰</div>Cargando...</div></div>
     </div>
     <!-- ALERTAS -->
     <div class="pane" id="pane-alertas">

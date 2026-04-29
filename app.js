@@ -154,6 +154,12 @@
     renderAlertas();
   });
 
+  let pagos = {};
+  db.ref('pagos').on('value', snap => {
+    pagos = snap.val() || {};
+    if (document.getElementById('pane-caja').classList.contains('active')) renderCaja();
+  });
+
   db.ref('gymCreds').once('value', snap => {
     const v = snap.val();
     if (v) CREDS = v;
@@ -387,6 +393,7 @@
       if (t.dataset.tab === 'stats') renderStats();
       if (t.dataset.tab === 'alertas') renderAlertas();
       if (t.dataset.tab === 'config') renderConfig();
+      if (t.dataset.tab === 'caja') renderCaja();
     });
   });
 
@@ -509,8 +516,21 @@
     }
     const id = clienteEditandoId || ('c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6));
     if (!clienteEditandoId) clienteEditandoId = id;
+    const esNuevo = !clientes[id];
     db.ref('clientes/' + id).set(data)
       .then(() => {
+        // Registrar pago solo si es cliente nuevo (no edición)
+        if (esNuevo && data.valor) {
+          db.ref('pagos').push({
+            clienteId: id,
+            nombre: data.nombre,
+            plan: data.plan,
+            valor: data.valor,
+            fecha: data.fechaInicio,
+            tipo: 'nuevo',
+            ts: Date.now()
+          });
+        }
         setSaveStatus('saved', '✓ Guardado');
         if (cerrar) cerrarModalCliente();
       })
@@ -611,6 +631,16 @@
     const valor = parseInt(valorRaw) || 0;
     db.ref('clientes/' + id).update({ fechaInicio: hoy, fechaPago, valor })
       .then(() => {
+        // Guardar en historial de pagos
+        db.ref('pagos').push({
+          clienteId: id,
+          nombre: c.nombre,
+          plan: c.plan,
+          valor,
+          fecha: hoy,
+          tipo: 'renovacion',
+          ts: Date.now()
+        });
         document.getElementById('modal-renovar').classList.remove('open');
         clienteRenovandoId = null;
       });
@@ -956,6 +986,169 @@
     CREDS.pass = np;
     db.ref('gymCreds').set(CREDS)
       .then(() => { alert('✅ Contraseña actualizada'); document.getElementById('cfg-newpass').value = ''; });
+  };
+
+  // ── CAJA / HISTORIAL DE PAGOS ──
+  let cajaMesFiltro = null; // null = todos
+
+  function renderCaja() {
+    const arr = Object.entries(pagos)
+      .map(([id, p]) => ({ id, ...p }))
+      .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const anioActual = hoy.getFullYear();
+
+    // Calcular totales por mes (últimos 6 meses)
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const resumenMeses = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(anioActual, mesActual - i, 1);
+      const m = d.getMonth(); const y = d.getFullYear();
+      const pagosDelMes = arr.filter(p => {
+        const pd = new Date(p.fecha + 'T00:00:00');
+        return pd.getMonth() === m && pd.getFullYear() === y;
+      });
+      resumenMeses.push({
+        label: meses[m] + (y !== anioActual ? ' ' + y : ''),
+        m, y,
+        total: pagosDelMes.reduce((s, p) => s + (p.valor || 0), 0),
+        count: pagosDelMes.length
+      });
+    }
+
+    // Filtrar por mes seleccionado
+    const arrFiltrado = cajaMesFiltro === null ? arr : arr.filter(p => {
+      const pd = new Date(p.fecha + 'T00:00:00');
+      return pd.getMonth() === cajaMesFiltro.m && pd.getFullYear() === cajaMesFiltro.y;
+    });
+    const totalFiltrado = arrFiltrado.reduce((s, p) => s + (p.valor || 0), 0);
+
+    document.getElementById('caja-content').innerHTML = `
+      <div class="caja-header">
+        <div class="mcard" style="margin-bottom:0;flex:1">
+          <div class="m-lbl">${cajaMesFiltro ? resumenMeses.find(r=>r.m===cajaMesFiltro.m&&r.y===cajaMesFiltro.y)?.label || 'Mes' : 'Total acumulado'}</div>
+          <div class="m-val" style="font-size:28px;color:var(--green)">${fmtCOP(totalFiltrado)}</div>
+          <div class="m-sub">${arrFiltrado.length} pago${arrFiltrado.length !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin:14px 0 8px">Resumen por mes</div>
+      <div class="caja-meses">
+        <button class="caja-mes-btn ${cajaMesFiltro === null ? 'active' : ''}" onclick="setCajaMes(null)">Todos</button>
+        ${resumenMeses.map(r => `
+          <button class="caja-mes-btn ${cajaMesFiltro && cajaMesFiltro.m === r.m && cajaMesFiltro.y === r.y ? 'active' : ''}"
+            onclick="setCajaMes({m:${r.m},y:${r.y}})">
+            ${r.label}<br><span style="font-size:10px;opacity:0.7">${fmtCOP(r.total)}</span>
+          </button>`).join('')}
+      </div>
+
+      <div class="section-title" style="margin:16px 0 8px">Detalle de pagos</div>
+      ${arrFiltrado.length === 0
+        ? `<div class="empty-state"><div class="empty-icon">💸</div>Sin pagos registrados${cajaMesFiltro ? ' en este mes' : ''}</div>`
+        : arrFiltrado.map(p => `
+          <div class="pago-card">
+            <div class="pago-avatar">${(p.nombre||'?').split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase()}</div>
+            <div class="pago-info">
+              <div class="pago-nombre">${p.nombre || '—'}</div>
+              <div class="pago-meta">${p.plan || '—'} · ${fmtFecha(p.fecha)} · <span class="pago-tipo-${p.tipo||'nuevo'}">${p.tipo === 'renovacion' ? '🔄 Renovación' : '🆕 Nuevo'}</span></div>
+            </div>
+            <div class="pago-valor">${fmtCOP(p.valor)}</div>
+          </div>`).join('')}
+      <div style="height:20px"></div>
+    `;
+  }
+
+  window.setCajaMes = function(mes) {
+    cajaMesFiltro = mes;
+    renderCaja();
+  };
+
+  // ── EXPORTAR EXCEL ──
+  window.exportarExcel = function() {
+    const arr = Object.entries(clientes).map(([id, c]) => ({
+      'Nombre': c.nombre || '',
+      'Cédula': c.cedula || '',
+      'Teléfono': c.telefono || '',
+      'Plan': c.plan || '',
+      'Valor (COP)': c.valor || 0,
+      'Inicio': c.fechaInicio || '',
+      'Vencimiento': c.fechaPago || '',
+      'Estado': getEstado(c) === 'activo' ? 'Al día' : getEstado(c) === 'por-vencer' ? 'Por vencer' : 'Vencido',
+      'Notas': c.notas || ''
+    }));
+    if (!arr.length) { alert('No hay clientes para exportar'); return; }
+    const ws = XLSX.utils.json_to_sheet(arr);
+    // Ancho de columnas
+    ws['!cols'] = [22,14,14,14,14,12,12,12,24].map(w => ({ wch: w }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+    // Hoja de pagos
+    const pagosArr = Object.values(pagos).sort((a,b)=>(b.ts||0)-(a.ts||0)).map(p => ({
+      'Cliente': p.nombre || '',
+      'Plan': p.plan || '',
+      'Valor (COP)': p.valor || 0,
+      'Fecha': p.fecha || '',
+      'Tipo': p.tipo === 'renovacion' ? 'Renovación' : 'Nuevo'
+    }));
+    if (pagosArr.length) {
+      const ws2 = XLSX.utils.json_to_sheet(pagosArr);
+      ws2['!cols'] = [22,14,14,12,12].map(w => ({ wch: w }));
+      XLSX.utils.book_append_sheet(wb, ws2, 'Historial pagos');
+    }
+    const nombre = (gymConfig.nombre || 'GYM').replace(/\s+/g, '_');
+    XLSX.writeFile(wb, `${nombre}_clientes_${getFechaHoy()}.xlsx`);
+  };
+
+  // ── EXPORTAR PDF ──
+  window.exportarPDF = function() {
+    const arr = Object.entries(clientes)
+      .map(([id, c]) => ({ id, ...c }))
+      .sort((a, b) => {
+        const ord = { vencido: 0, 'por-vencer': 1, activo: 2 };
+        return ord[getEstado(a)] - ord[getEstado(b)];
+      });
+    if (!arr.length) { alert('No hay clientes para exportar'); return; }
+    const gymNombre = gymConfig.nombre || 'GYM';
+    const estadoColor = { activo: '#22c55e', 'por-vencer': '#eab308', vencido: '#ef4444' };
+    const estadoTxt = { activo: 'Al día', 'por-vencer': 'Por vencer', vencido: 'Vencido' };
+    const filas = arr.map(c => {
+      const est = getEstado(c);
+      return `<tr>
+        <td>${c.nombre || '—'}</td>
+        <td>${c.cedula || '—'}</td>
+        <td>${c.plan || '—'}</td>
+        <td>${fmtCOP(c.valor)}</td>
+        <td>${fmtFecha(c.fechaInicio)}</td>
+        <td>${fmtFecha(c.fechaPago)}</td>
+        <td><span style="background:${estadoColor[est]}22;color:${estadoColor[est]};padding:2px 8px;border-radius:12px;font-weight:700;font-size:11px">${estadoTxt[est]}</span></td>
+      </tr>`;
+    }).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>${gymNombre} — Clientes</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 24px; }
+      h1 { font-size: 22px; margin-bottom: 2px; }
+      .sub { color: #666; font-size: 11px; margin-bottom: 16px; }
+      table { width: 100%; border-collapse: collapse; }
+      th { background: #111; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+      td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+      tr:nth-child(even) td { background: #f9f9f9; }
+      .total { margin-top: 14px; font-weight: 700; font-size: 13px; }
+    </style></head><body>
+    <h1>🏋️ ${gymNombre}</h1>
+    <div class="sub">Listado de clientes · Generado el ${new Date().toLocaleDateString('es-CO', {day:'2-digit',month:'long',year:'numeric'})}</div>
+    <table>
+      <thead><tr><th>Nombre</th><th>Cédula</th><th>Plan</th><th>Valor</th><th>Inicio</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div class="total">Total clientes: ${arr.length} &nbsp;|&nbsp; Al día: ${arr.filter(c=>getEstado(c)==='activo').length} &nbsp;|&nbsp; Vencidos: ${arr.filter(c=>getEstado(c)==='vencido').length}</div>
+    </body></html>`;
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.print(); };
   };
 
 })();
