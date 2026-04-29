@@ -25,15 +25,35 @@
   <div class="login-card">
     <div class="login-title">🔐 Acceso Administrador</div>
     <div class="login-hint">Ingresa tus credenciales</div>
-    <div class="field-wrap">
-      <label class="field-label">Usuario</label>
-      <input id="inp-user" class="inp" type="text" placeholder="admin" autocomplete="username" autocorrect="off" autocapitalize="off">
+
+    <!-- TABS LOGIN -->
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchLoginTab('manual')">Usuario / Clave</button>
+      <button class="login-tab" onclick="switchLoginTab('google')">Google</button>
     </div>
-    <div class="field-wrap">
-      <label class="field-label">Contraseña</label>
-      <input id="inp-pass" class="inp pass" type="password" placeholder="••••" autocomplete="current-password">
+
+    <!-- TAB MANUAL -->
+    <div id="tab-manual">
+      <div class="field-wrap">
+        <label class="field-label">Usuario</label>
+        <input id="inp-user" class="inp" type="text" placeholder="admin" autocomplete="username" autocorrect="off" autocapitalize="off">
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Contraseña</label>
+        <input id="inp-pass" class="inp pass" type="password" placeholder="••••" autocomplete="current-password">
+      </div>
+      <button class="btn-gold" id="btn-login">ENTRAR →</button>
     </div>
-    <button class="btn-gold" id="btn-login">ENTRAR →</button>
+
+    <!-- TAB GOOGLE -->
+    <div id="tab-google" style="display:none">
+      <button class="btn-google" id="btn-google-login">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.2 30.2 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.9 6.1C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.6h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-8.1 6.2C6.7 42.6 14.7 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Continuar con Google
+      </button>
+      <p class="google-hint">Inicia sesión con tu cuenta de Google autorizada</p>
+    </div>
+
     <div class="login-err" id="login-err">❌ Usuario o contraseña incorrectos</div>
   </div>
 </div>
@@ -44,9 +64,29 @@
     <div class="topbar-logo">GYM</div>
     <div class="topbar-right">
       <button class="btn-sm btn-outline" id="btn-notif-perm" style="display:none">🔔 Activar</button>
+      <!-- Avatar usuario -->
+      <div class="user-avatar-btn" id="topbar-avatar" onclick="toggleUserMenu()">
+        <img id="topbar-avatar-img" src="" alt="" style="display:none; width:32px; height:32px; border-radius:50%; object-fit:cover;">
+        <span id="topbar-avatar-initials"></span>
+      </div>
       <button class="btn-sm btn-red" id="btn-logout">Salir</button>
     </div>
   </div>
+
+  <!-- USER MENU DROPDOWN -->
+  <div id="user-menu" class="user-menu" style="display:none">
+    <div class="user-menu-header">
+      <div id="menu-avatar-wrap" class="menu-avatar"></div>
+      <div>
+        <div id="menu-user-name" class="menu-user-name">—</div>
+        <div id="menu-user-email" class="menu-user-email">—</div>
+      </div>
+    </div>
+    <hr class="menu-divider">
+    <button class="menu-item" onclick="irAConfigUsuario()">⚙️ Configuración de usuario</button>
+    <button class="menu-item menu-item-red" onclick="doLogout()">🚪 Cerrar sesión</button>
+  </div>
+
   <div class="tabs">
     <button class="tab active" data-tab="stats">📊 Stats</button>
     <button class="tab" data-tab="clientes">👥 Clientes</button>
@@ -88,19 +128,15 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-titulo">NUEVO CLIENTE</div>
-
-    <!-- Indicador de guardado en tiempo real -->
     <div id="save-indicator" class="save-indicator">
       <span id="save-text">Sin cambios</span>
     </div>
-
     <div class="modal-grid">
       <div class="form-group full">
         <label class="form-label">Nombre completo *</label>
         <input class="form-inp" id="f-nombre" type="text" placeholder="Ej: Juan Pérez" oninput="autoGuardar()">
       </div>
       <div class="form-group">
-        <!-- CC: tipo text para quitar flechas de número -->
         <label class="form-label">Cédula</label>
         <input class="form-inp" id="f-cedula" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456789" oninput="autoGuardar()">
       </div>
@@ -113,7 +149,6 @@
         <select class="form-inp" id="f-plan" onchange="onPlanChange()"></select>
       </div>
       <div class="form-group">
-        <!-- Precio editable: autocompleta al elegir plan pero se puede cambiar -->
         <label class="form-label">Valor a cobrar (COP) ✏️</label>
         <input class="form-inp" id="f-valor" type="text" inputmode="numeric" placeholder="80000" oninput="autoGuardar()">
       </div>
@@ -158,8 +193,60 @@
   </div>
 </div>
 
+<!-- MODAL CONFIG USUARIO -->
+<div class="modal-overlay" id="modal-user-config">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">MI PERFIL</div>
+
+    <!-- Avatar editable -->
+    <div style="text-align:center; margin-bottom:24px;">
+      <div class="avatar-edit-wrap" onclick="document.getElementById('avatar-file-input').click()">
+        <div id="avatar-preview" class="avatar-preview-big"></div>
+        <div class="avatar-edit-overlay">📷 Cambiar</div>
+      </div>
+      <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="handleAvatarChange(event)">
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">Toca para cambiar foto</p>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Nombre de usuario</label>
+      <input class="form-inp" id="user-display-name" type="text" placeholder="Tu nombre">
+    </div>
+
+    <!-- SECCIÓN COLORES -->
+    <div class="config-card" style="margin-bottom:14px">
+      <h3>🎨 Color del tema</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Personaliza el color principal de la app</p>
+      <div class="color-presets">
+        <button class="color-preset" data-color="#D4AF37" style="background:#D4AF37" title="Dorado (default)" onclick="selectColorPreset('#D4AF37', this)"></button>
+        <button class="color-preset" data-color="#e53e3e" style="background:#e53e3e" title="Rojo" onclick="selectColorPreset('#e53e3e', this)"></button>
+        <button class="color-preset" data-color="#3182ce" style="background:#3182ce" title="Azul" onclick="selectColorPreset('#3182ce', this)"></button>
+        <button class="color-preset" data-color="#38a169" style="background:#38a169" title="Verde" onclick="selectColorPreset('#38a169', this)"></button>
+        <button class="color-preset" data-color="#805ad5" style="background:#805ad5" title="Morado" onclick="selectColorPreset('#805ad5', this)"></button>
+        <button class="color-preset" data-color="#dd6b20" style="background:#dd6b20" title="Naranja" onclick="selectColorPreset('#dd6b20', this)"></button>
+        <button class="color-preset" data-color="#00b5d8" style="background:#00b5d8" title="Cian" onclick="selectColorPreset('#00b5d8', this)"></button>
+        <button class="color-preset" data-color="#d53f8c" style="background:#d53f8c" title="Rosa" onclick="selectColorPreset('#d53f8c', this)"></button>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; margin-top:14px">
+        <label class="form-label" style="margin:0; white-space:nowrap">Color personalizado:</label>
+        <input type="color" id="custom-color-picker" value="#D4AF37"
+          style="width:48px;height:36px;border:1.5px solid var(--border);border-radius:8px;background:var(--dark4);cursor:pointer;padding:2px"
+          oninput="applyThemeColor(this.value, true)">
+        <span id="color-hex-display" style="font-size:13px;color:var(--muted);font-family:monospace">#D4AF37</span>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModalUserConfig()">Cancelar</button>
+      <button class="btn-guardar" onclick="guardarConfigUsuario()">💾 GUARDAR</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="app.js"></script>
 <script>
