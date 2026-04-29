@@ -344,3 +344,68 @@ select.form-inp { cursor: pointer; }
   font-size: 11px; color: var(--muted);
   margin-top: 4px; text-align: center;
 }
+
+/* ── TOPBAR AVATAR ── */
+.user-avatar-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #8B6914);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px; color: #0a0a0a; font-weight: 700;
+  border: 2px solid rgba(212,175,55,0.4);
+  transition: border-color 0.2s;
+  overflow: hidden; flex-shrink: 0;
+}
+.user-avatar-btn:active { opacity: 0.8; }
+
+/* ── USER MENU DROPDOWN ── */
+.user-menu {
+  position: fixed;
+  top: 56px; right: 8px;
+  width: 230px;
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+  z-index: 999;
+  overflow: hidden;
+  animation: menuFadeIn 0.15s ease;
+}
+@keyframes menuFadeIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.user-menu-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 16px 12px;
+  background: var(--dark4);
+}
+.menu-avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--gold), #8B6914);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: #0a0a0a;
+  overflow: hidden;
+}
+.menu-user-name {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.menu-user-email {
+  font-size: 11px; color: var(--muted); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.menu-divider {
+  border: none; border-top: 1px solid var(--border); margin: 0;
+}
+.menu-item {
+  display: block; width: 100%;
+  padding: 13px 16px;
+  background: none; border: none;
+  font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 600;
+  color: var(--text); text-align: left; cursor: pointer;
+  transition: background 0.15s;
+}
+.menu-item:hover, .menu-item:active { background: var(--dark4); }
+.menu-item-red { color: var(--red); }
+.menu-item-red:hover, .menu-item-red:active 
