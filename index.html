@@ -20,8 +20,37 @@
 
 <!-- LOGIN -->
 <div id="login-screen">
-  <div class="login-emblem">GYM</div>
-  <div class="login-sub">Panel de Control</div>
+  <div class="login-emblem" id="login-emblem-text">GYM</div>
+  <div class="login-sub" id="login-sub-text">Panel de Control</div>
+  <!-- SETUP CARD: nombre + paleta (visible solo en primer uso) -->
+  <div class="setup-card" id="setup-card">
+    <div class="setup-title">✨ Personaliza tu app</div>
+    <div class="setup-hint">Estos cambios se aplican al instante en toda la aplicación</div>
+
+    <div class="field-wrap">
+      <label class="field-label">Nombre de tu Gym</label>
+      <input id="setup-gym-name" class="inp" type="text" placeholder="Ej: PowerFit Gym" maxlength="32" oninput="previewGymName(this.value)">
+    </div>
+
+    <div class="field-wrap">
+      <label class="field-label">Color principal</label>
+      <div class="setup-palette">
+        <button class="pal-btn active" data-color="#D4AF37" style="background:#D4AF37" title="Dorado" onclick="selectSetupColor('#D4AF37',this)"></button>
+        <button class="pal-btn" data-color="#e53e3e" style="background:#e53e3e" title="Rojo" onclick="selectSetupColor('#e53e3e',this)"></button>
+        <button class="pal-btn" data-color="#3182ce" style="background:#3182ce" title="Azul" onclick="selectSetupColor('#3182ce',this)"></button>
+        <button class="pal-btn" data-color="#38a169" style="background:#38a169" title="Verde" onclick="selectSetupColor('#38a169',this)"></button>
+        <button class="pal-btn" data-color="#805ad5" style="background:#805ad5" title="Morado" onclick="selectSetupColor('#805ad5',this)"></button>
+        <button class="pal-btn" data-color="#dd6b20" style="background:#dd6b20" title="Naranja" onclick="selectSetupColor('#dd6b20',this)"></button>
+        <button class="pal-btn" data-color="#00b5d8" style="background:#00b5d8" title="Cian" onclick="selectSetupColor('#00b5d8',this)"></button>
+        <button class="pal-btn" data-color="#d53f8c" style="background:#d53f8c" title="Rosa" onclick="selectSetupColor('#d53f8c',this)"></button>
+        <label class="pal-btn pal-custom" title="Color personalizado" style="cursor:pointer">
+          🎨
+          <input type="color" id="setup-color-picker" value="#D4AF37" style="opacity:0;width:0;height:0;position:absolute" oninput="selectSetupColor(this.value, null, true)">
+        </label>
+      </div>
+    </div>
+  </div>
+
   <div class="login-card">
     <div class="login-title">🔐 Acceso Administrador</div>
     <div class="login-hint">Ingresa tus credenciales</div>
@@ -61,7 +90,7 @@
 <!-- APP -->
 <div id="app">
   <div class="topbar">
-    <div class="topbar-logo">GYM</div>
+    <div class="topbar-logo" id="topbar-logo-text">GYM</div>
     <div class="topbar-right">
       <button class="btn-sm btn-outline" id="btn-notif-perm" style="display:none">🔔 Activar</button>
       <!-- Avatar usuario -->

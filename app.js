@@ -84,10 +84,70 @@
     document.getElementById('tab-google').style.display = tab === 'google' ? 'block' : 'none';
   };
 
+  // ── ACTUALIZAR NOMBRE GYM EN TODA LA UI ──
+  function updateGymNameUI(nombre) {
+    const n = (nombre || 'GYM').toUpperCase();
+    const short = n.length > 12 ? n.slice(0, 12) + '…' : n;
+    const el = document.getElementById('login-emblem-text');
+    const topbar = document.getElementById('topbar-logo-text');
+    const sub = document.getElementById('login-sub-text');
+    if (el) el.textContent = n;
+    if (topbar) topbar.textContent = short;
+    if (sub) sub.textContent = 'Panel de Control — ' + n;
+    document.title = n + ' — Panel de Control';
+  }
+
+  // Preview en tiempo real desde el input de setup
+  window.previewGymName = function(val) {
+    updateGymNameUI(val || 'GYM');
+    // Guardar en localStorage inmediatamente para persistir
+    try {
+      const prefs = JSON.parse(localStorage.getItem('gymUserPrefs') || '{}');
+      prefs.gymNombreLocal = val;
+      localStorage.setItem('gymUserPrefs', JSON.stringify(prefs));
+    } catch(e) {}
+  };
+
+  // Selección de color desde setup del login
+  window.selectSetupColor = function(hex, btn, isCustom) {
+    applyThemeColor(hex, true);
+    // Marcar activo
+    document.querySelectorAll('.pal-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    // Guardar en prefs locales para persistir en la sesión
+    try {
+      const prefs = JSON.parse(localStorage.getItem('gymUserPrefs') || '{}');
+      prefs.themeColor = hex;
+      localStorage.setItem('gymUserPrefs', JSON.stringify(prefs));
+    } catch(e) {}
+  };
+
+  // Inicializar el setup card con valores guardados
+  (function initSetupCard() {
+    try {
+      const prefs = JSON.parse(localStorage.getItem('gymUserPrefs') || '{}');
+      if (prefs.gymNombreLocal) {
+        const inp = document.getElementById('setup-gym-name');
+        if (inp) inp.value = prefs.gymNombreLocal;
+        updateGymNameUI(prefs.gymNombreLocal);
+      }
+      if (prefs.themeColor) {
+        // Marcar preset activo en setup palette
+        document.querySelectorAll('.pal-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.color === prefs.themeColor);
+        });
+      }
+    } catch(e) {}
+  })();
+
   // ── FIREBASE LISTENERS ──
   db.ref('gymConfig').on('value', snap => {
     const v = snap.val();
     if (v) gymConfig = { ...gymConfig, ...v };
+    // Si el gym tiene nombre en Firebase, actualizamos la UI (pero respetando lo del input de setup si está activo)
+    const setupInput = document.getElementById('setup-gym-name');
+    const localName = setupInput && setupInput.value.trim();
+    updateGymNameUI(localName || gymConfig.nombre || 'GYM');
     cargarPlanesEnSelect();
     if (document.getElementById('pane-config').classList.contains('active')) renderConfig();
   });
@@ -157,6 +217,14 @@
 
   // ── ENTRAR AL APP ──
   function entrarAlApp() {
+    // Si el usuario escribió un nombre en el setup, guardarlo en Firebase
+    const setupInput = document.getElementById('setup-gym-name');
+    const localName = setupInput && setupInput.value.trim();
+    if (localName && localName !== gymConfig.nombre) {
+      gymConfig.nombre = localName;
+      db.ref('gymConfig').update({ nombre: localName });
+    }
+    updateGymNameUI(localName || gymConfig.nombre || 'GYM');
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('visible');
     updateTopbarAvatar();
@@ -265,6 +333,12 @@
 
     saveUserPrefs(prefs);
     applyThemeColor(themeColor, false);
+    // Sincronizar paleta del setup card en login
+    document.querySelectorAll('.pal-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === themeColor);
+    });
+    const setupPicker = document.getElementById('setup-color-picker');
+    if (setupPicker) setupPicker.value = themeColor;
     updateTopbarAvatar();
     cerrarModalUserConfig();
   };
@@ -818,7 +892,16 @@
     const nombre = document.getElementById('cfg-nombre').value.trim();
     const telefono = document.getElementById('cfg-tel').value.trim();
     db.ref('gymConfig').update({ nombre, telefono })
-      .then(() => alert('✅ Datos guardados'));
+      .then(() => {
+        updateGymNameUI(nombre);
+        // Sincronizar con el setup input del login
+        try {
+          const prefs = JSON.parse(localStorage.getItem('gymUserPrefs') || '{}');
+          prefs.gymNombreLocal = nombre;
+          localStorage.setItem('gymUserPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        alert('✅ Datos guardados');
+      });
   };
 
   window.agregarPlan = function () {
