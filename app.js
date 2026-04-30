@@ -18,8 +18,9 @@
   const auth = firebase.auth();
 
   // ══════════════════════════════════════════════
-  // SUPERADMIN CONFIG — cambia esta contraseña
+  // SUPERADMIN CONFIG — cambia estos datos de acceso
   // ══════════════════════════════════════════════
+  const SA_USER = 'superadmin';
   const SA_PASS = 'superadmin2024';
 
   // ══════════════════════════════════════════════
@@ -139,7 +140,10 @@
     document.getElementById('login-screen').style.display = 'flex';
     // Actualizar UI del login con datos del gym
     updateGymNameUI(gymConfig.nombre || currentGymId);
-    document.getElementById('gymid-badge').textContent = '@' + currentGymId;
+    document.getElementById('gymid-badge').textContent = currentGymId ? '@' + currentGymId : '';
+    // Mostrar campo ID gym solo si no hay gym cargado aún (acceso directo a login)
+    const gymLoginWrap = document.getElementById('gym-login-wrap');
+    if (gymLoginWrap) gymLoginWrap.style.display = currentGymId ? 'none' : 'block';
     // Escuchar estado auth de Firebase para login con Google
     auth.onAuthStateChanged(user => {
       if (user && currentGymId) {
@@ -347,9 +351,36 @@
   // ══════════════════════════════════════════════
   document.getElementById('btn-login').addEventListener('click', doLogin);
   document.getElementById('inp-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('inp-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inp-pass').focus(); });
+  // Si el campo gym-id-login existe (login directo), Enter en gym pasa al usuario
+  const inpGymLogin = document.getElementById('inp-gym-login');
+  if (inpGymLogin) {
+    inpGymLogin.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inp-user').focus(); });
+  }
 
   function doLogin() {
-    if (!currentGymId) return;
+    // Soporte para ingreso directo por ID de gym desde la pantalla de login
+    const gymLoginInput = document.getElementById('inp-gym-login');
+    if (gymLoginInput && gymLoginInput.value.trim() && !currentGymId) {
+      const gymIdDirecto = gymLoginInput.value.trim().toLowerCase();
+      db.ref(`gyms/${gymIdDirecto}/config`).once('value').then(snap => {
+        if (!snap.exists()) {
+          const err = document.getElementById('login-err');
+          err.textContent = '❌ Gimnasio no encontrado';
+          err.style.display = 'block';
+          setTimeout(() => { err.style.display = 'none'; err.textContent = '❌ Usuario o contraseña incorrectos'; }, 3000);
+          return;
+        }
+        currentGymId = gymIdDirecto;
+        doLoginConGymId();
+      });
+    } else {
+      if (!currentGymId) return;
+      doLoginConGymId();
+    }
+  }
+
+  function doLoginConGymId() {
     const u = document.getElementById('inp-user').value.trim();
     const p = document.getElementById('inp-pass').value;
     db.ref(`gyms/${currentGymId}/creds`).once('value').then(snap => {
@@ -360,6 +391,7 @@
         entrarAlApp();
       } else {
         const err = document.getElementById('login-err');
+        err.textContent = '❌ Usuario o contraseña incorrectos';
         err.style.display = 'block';
         setTimeout(() => err.style.display = 'none', 3000);
       }
@@ -1366,9 +1398,10 @@
   // SUPER ADMIN
   // ══════════════════════════════════════════════
   window.loginSuperAdmin = function() {
+    const user = document.getElementById('sa-user').value.trim();
     const pass = document.getElementById('sa-pass').value;
     const errEl = document.getElementById('sa-err');
-    if (pass !== SA_PASS) {
+    if (user !== SA_USER || pass !== SA_PASS) {
       errEl.style.display = 'block';
       setTimeout(() => errEl.style.display = 'none', 3000);
       return;

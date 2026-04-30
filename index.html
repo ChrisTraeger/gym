@@ -156,6 +156,12 @@
 
       <div class="login-divider"><span>o ingresa manualmente</span></div>
 
+      <div class="field-wrap" id="gym-login-wrap" style="display:none">
+        <label class="field-label">ID del Gimnasio</label>
+        <input id="inp-gym-login" class="inp" type="text" placeholder="ej: powerfit-medellin"
+          autocomplete="off" autocorrect="off" autocapitalize="off">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Solo si accedes directamente sin haber buscado el gym</div>
+      </div>
       <div class="field-wrap">
         <label class="field-label">Usuario</label>
         <input id="inp-user" class="inp" type="text" placeholder="admin"
@@ -185,12 +191,18 @@
     <div id="sa-login-wrap" class="login-card" style="max-width:360px">
       <div class="login-title">🛡️ Acceso SuperAdmin</div>
       <div class="field-wrap">
+        <label class="field-label">Usuario</label>
+        <input id="sa-user" class="inp" type="text" placeholder="superadmin"
+          autocomplete="off" autocorrect="off" autocapitalize="off"
+          onkeydown="if(event.key==='Enter') document.getElementById('sa-pass').focus()">
+      </div>
+      <div class="field-wrap">
         <label class="field-label">Contraseña maestra</label>
         <input id="sa-pass" class="inp pass" type="password" placeholder="••••"
           onkeydown="if(event.key==='Enter') loginSuperAdmin()">
       </div>
       <button class="btn-gold" onclick="loginSuperAdmin()">ACCEDER →</button>
-      <div id="sa-err" class="login-err">❌ Contraseña incorrecta</div>
+      <div id="sa-err" class="login-err">❌ Usuario o contraseña incorrectos</div>
     </div>
 
     <div id="sa-panel" style="display:none;width:100%;max-width:640px">
