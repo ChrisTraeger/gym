@@ -302,9 +302,10 @@
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     if (isMobile) {
-      // Guardar en sessionStorage para recuperar después del redirect
-      sessionStorage.setItem('pendingGymReg', JSON.stringify({ gymId, nombre }));
-      auth.signInWithRedirect(provider);
+      // Guardar en Firebase (no sessionStorage, que se pierde con el redirect en móvil)
+      const tempKey = 'pendingReg_' + gymId;
+      db.ref('_pendingRegs/' + tempKey).set({ gymId, nombre, ts: Date.now() })
+        .then(() => auth.signInWithRedirect(provider));
     } else {
       auth.signInWithPopup(provider).then(result => {
         crearGymConGoogleUser(result.user, gymId, nombre);
@@ -403,23 +404,41 @@
 
   auth.getRedirectResult().then(result => {
     if (!result || !result.user) return;
-    // Verificar si viene de registro
-    const pending = sessionStorage.getItem('pendingGymReg');
-    if (pending) {
-      sessionStorage.removeItem('pendingGymReg');
-      const { gymId, nombre } = JSON.parse(pending);
-      crearGymConGoogleUser(result.user, gymId, nombre);
-      return;
-    }
-    // Login normal a gym existente
-    if (currentGymId) {
-      db.ref(`gyms/${currentGymId}/usuarios/${result.user.uid}`).once('value').then(snap => {
-        if (snap.val()) {
-          setupCurrentUser({ name: result.user.displayName||'Admin', email: result.user.email||'', photo: result.user.photoURL||'', uid: result.user.uid, loginType: 'google' });
-          entrarAlApp();
-        }
-      });
-    }
+
+    // Buscar registro pendiente en Firebase (fix para móvil donde sessionStorage se pierde)
+    db.ref('_pendingRegs').orderByChild('ts').limitToLast(10).once('value').then(snap => {
+      const regs = snap.val() || {};
+      const uid = result.user.uid;
+      // Buscar si hay un pending para este usuario (guardado justo antes del redirect)
+      const pendingEntry = Object.entries(regs).find(([key]) => key.startsWith('pendingReg_'));
+
+      if (pendingEntry) {
+        const [key, { gymId, nombre }] = pendingEntry;
+        // Borrar el pending
+        db.ref('_pendingRegs/' + key).remove();
+        crearGymConGoogleUser(result.user, gymId, nombre);
+        return;
+      }
+
+      // Fallback: sessionStorage (escritorio)
+      const pending = sessionStorage.getItem('pendingGymReg');
+      if (pending) {
+        sessionStorage.removeItem('pendingGymReg');
+        const { gymId, nombre } = JSON.parse(pending);
+        crearGymConGoogleUser(result.user, gymId, nombre);
+        return;
+      }
+
+      // Login normal a gym existente
+      if (currentGymId) {
+        db.ref(`gyms/${currentGymId}/usuarios/${uid}`).once('value').then(snap => {
+          if (snap.val()) {
+            setupCurrentUser({ name: result.user.displayName||'Admin', email: result.user.email||'', photo: result.user.photoURL||'', uid, loginType: 'google' });
+            entrarAlApp();
+          }
+        });
+      }
+    });
   }).catch(() => {});
 
   document.getElementById('btn-google-login').addEventListener('click', () => {
