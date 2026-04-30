@@ -893,8 +893,7 @@
     document.getElementById('f-notas').value = '';
     document.getElementById('f-inicio').value = getFechaHoy();
     cargarPlanesEnSelect();
-    const primerPlan = (gymConfig.planes||[])[0];
-    if (primerPlan) document.getElementById('f-valor').value = primerPlan.precio;
+    onPlanChange(); // autocompleta el precio del plan seleccionado
     setSaveStatus('', 'Sin cambios');
     document.getElementById('modal-cliente').classList.add('open');
   };
@@ -1618,13 +1617,14 @@
   // ══════════════════════════════════════════════
 
   const PLANES_CONFIG = {
-    free:       { nombre: 'Free',       precio_mes: 0,      precio_anual: 0,      clientes_max: 30,  features: ['Hasta 30 clientes', 'Panel básico', 'Exportar Excel'] },
-    pro:        { nombre: 'Pro',        precio_mes: 29900,  precio_anual: 299000, clientes_max: 999, features: ['Clientes ilimitados', 'Historial de pagos', 'WhatsApp masivo', 'Múltiples admins', 'Soporte prioritario'] },
-    enterprise: { nombre: 'Enterprise', precio_mes: 79900,  precio_anual: 799000, clientes_max: 9999,features: ['Todo Pro', 'Múltiples sedes', 'API acceso', 'Onboarding personalizado'] }
+    free:       { nombre: 'Free',       clientes_max: 30,  features: ['Hasta 30 clientes', 'Panel básico', 'Exportar Excel'] },
+    pro:        { nombre: 'Pro',        clientes_max: 999,  features: ['Clientes ilimitados', 'Historial de pagos', 'WhatsApp masivo', 'Múltiples admins', 'Soporte prioritario'] },
+    enterprise: { nombre: 'Enterprise', clientes_max: 9999, features: ['Todo Pro', 'Múltiples sedes', 'API acceso', 'Onboarding personalizado'] }
   };
 
   const NEQUI_NUM    = '3001234567';   // ← cambia por tu número Nequi
   const BANCOLOMBIA_NUM = '123-456789-12'; // ← cambia por tu cuenta Bancolombia
+  const WHATSAPP_ADMIN  = '573001234567';  // ← tu WhatsApp (con código país, sin +)
 
   // Chequear si el gym tiene plan activo o debe pagar
   function checkSuscripcion() {
