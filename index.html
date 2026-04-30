@@ -3,102 +3,243 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>GYM — Panel de Control</title>
-
-  <!-- PWA -->
+  <title>GymPanel — Software para Gimnasios</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#D4AF37">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="GYM Panel">
-  <link rel="apple-touch-icon" href="icon-192.png">
-
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-emblem" id="login-emblem-text">GYM</div>
-  <div class="login-sub" id="login-sub-text">Panel de Control</div>
+<!-- ══════════════════════════════════════════════
+     LANDING / SELECTOR DE GYM
+══════════════════════════════════════════════ -->
+<div id="landing-screen">
+  <div class="landing-bg"></div>
+  <div class="landing-content">
+    <div class="brand-logo">GYMPANEL</div>
+    <div class="brand-tagline">Software de gestión para gimnasios</div>
 
-  <div class="login-card">
-    <div class="login-title">🔐 Acceso Administrador</div>
-    <div class="login-hint">Elige cómo quieres ingresar</div>
+    <div class="landing-cards">
 
-    <!-- GOOGLE PRIMERO -->
-    <button class="btn-google" id="btn-google-login">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.2 30.2 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.9 6.1C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.6h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-8.1 6.2C6.7 42.6 14.7 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-      Continuar con Google
-    </button>
+      <!-- ACCEDER A GYM EXISTENTE -->
+      <div class="lcard">
+        <div class="lcard-icon">🔐</div>
+        <div class="lcard-title">Acceder a mi Gym</div>
+        <div class="lcard-desc">¿Ya tienes una cuenta? Ingresa el ID de tu gimnasio para continuar.</div>
+        <div class="field-wrap" style="margin-top:16px">
+          <label class="field-label">ID de tu Gimnasio</label>
+          <input id="inp-gym-id" class="inp" type="text" placeholder="ej: powerfit-medellin"
+            autocorrect="off" autocapitalize="off" spellcheck="false"
+            oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+        </div>
+        <button class="btn-gold" onclick="irAlGym()" style="margin-top:12px">ENTRAR →</button>
+        <div id="gym-not-found-err" class="login-err">❌ Gimnasio no encontrado</div>
+      </div>
 
-    <div class="login-divider"><span>o</span></div>
+      <!-- REGISTRAR NUEVO GYM -->
+      <div class="lcard lcard-register">
+        <div class="lcard-icon">🏋️</div>
+        <div class="lcard-title">Registrar mi Gym</div>
+        <div class="lcard-desc">Crea tu cuenta gratis en menos de 1 minuto. Sin tarjeta requerida.</div>
+        <button class="btn-gold btn-outline-gold" onclick="mostrarRegistro()" style="margin-top:16px">CREAR CUENTA GRATIS →</button>
+        <div class="plan-badges">
+          <span class="plan-badge">✅ Gratis para siempre</span>
+          <span class="plan-badge">✅ Hasta 50 clientes</span>
+          <span class="plan-badge">✅ Sin contratos</span>
+        </div>
+      </div>
 
-    <!-- MANUAL COLAPSABLE -->
-    <div id="tab-manual">
+    </div>
+
+    <div class="landing-footer">
+      <span>¿Eres administrador?</span>
+      <button onclick="mostrarSuperAdmin()" class="link-btn">Panel SuperAdmin →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     REGISTRO DE NUEVO GYM
+══════════════════════════════════════════════ -->
+<div id="registro-screen" style="display:none">
+  <div class="landing-bg"></div>
+  <div class="auth-wrap">
+    <button class="back-btn" onclick="volverLanding()">← Volver</button>
+    <div class="brand-logo" style="font-size:36px;margin-bottom:4px">GYMPANEL</div>
+    <div class="brand-tagline" style="margin-bottom:32px">Crea tu cuenta</div>
+
+    <div class="login-card" style="max-width:420px">
+      <div class="login-title">🏋️ Registro de Gimnasio</div>
+      <div class="login-hint">Completa los datos para crear tu panel</div>
+
+      <div class="field-wrap">
+        <label class="field-label">Nombre del Gimnasio *</label>
+        <input id="reg-nombre" class="inp" type="text" placeholder="Ej: PowerFit Gym"
+          oninput="generarGymId()">
+      </div>
+
+      <div class="field-wrap">
+        <label class="field-label">ID del Gimnasio * <span style="color:var(--muted);font-weight:400">(URL de acceso)</span></label>
+        <div style="position:relative">
+          <input id="reg-gymid" class="inp" type="text" placeholder="powerfit-gym"
+            autocorrect="off" autocapitalize="off" spellcheck="false"
+            oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'');verificarGymId()">
+          <span id="gymid-check" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px"></span>
+        </div>
+        <div id="gymid-hint" style="font-size:11px;color:var(--muted);margin-top:4px">
+          Tu URL será: <span id="gymid-preview" style="color:var(--gold)">gympanel.app/<b>tu-id</b></span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field-wrap">
+          <label class="field-label">Teléfono / WhatsApp</label>
+          <input id="reg-tel" class="inp" type="tel" placeholder="3001234567">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Ciudad</label>
+          <input id="reg-ciudad" class="inp" type="text" placeholder="Medellín">
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+        <div class="login-hint" style="margin-bottom:12px">📌 Credenciales de acceso para tu panel</div>
+        <div class="field-wrap">
+          <label class="field-label">Usuario Admin *</label>
+          <input id="reg-user" class="inp" type="text" placeholder="admin" autocomplete="off">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Contraseña *</label>
+          <input id="reg-pass" class="inp" type="password" placeholder="Mínimo 4 caracteres">
+        </div>
+      </div>
+
+      <div id="reg-err" class="login-err"></div>
+
+      <button class="btn-gold" id="btn-registrar" onclick="registrarGym()">
+        CREAR MI GYM →
+      </button>
+
+      <div style="margin-top:16px;text-align:center">
+        <button class="btn-google" id="btn-google-reg">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.2 30.2 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.9 6.1C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.6h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-8.1 6.2C6.7 42.6 14.7 48 24 48z"/></svg>
+          Registrar con Google
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     LOGIN DE GYM ESPECÍFICO
+══════════════════════════════════════════════ -->
+<div id="login-screen" style="display:none">
+  <div class="landing-bg"></div>
+  <div class="auth-wrap">
+    <button class="back-btn" onclick="volverLanding()">← Cambiar gimnasio</button>
+    <div class="login-emblem" id="login-emblem-text">GYM</div>
+    <div class="login-sub" id="login-sub-text">Panel de Control</div>
+    <div class="gymid-badge" id="gymid-badge">@gym-id</div>
+
+    <div class="login-card">
+      <div class="login-title">🔐 Acceso Administrador</div>
+      <div class="login-hint">Elige cómo quieres ingresar</div>
+
+      <button class="btn-google" id="btn-google-login">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.2 30.2 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.9 6.1C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.6h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-8.1 6.2C6.7 42.6 14.7 48 24 48z"/></svg>
+        Continuar con Google
+      </button>
+
+      <div class="login-divider"><span>o ingresa manualmente</span></div>
+
       <div class="field-wrap">
         <label class="field-label">Usuario</label>
-        <input id="inp-user" class="inp" type="text" placeholder="admin" autocomplete="username" autocorrect="off" autocapitalize="off">
+        <input id="inp-user" class="inp" type="text" placeholder="admin"
+          autocomplete="username" autocorrect="off" autocapitalize="off">
       </div>
       <div class="field-wrap">
         <label class="field-label">Contraseña</label>
-        <input id="inp-pass" class="inp pass" type="password" placeholder="••••" autocomplete="current-password">
+        <input id="inp-pass" class="inp pass" type="password" placeholder="••••"
+          autocomplete="current-password">
       </div>
       <button class="btn-gold" id="btn-login">ENTRAR →</button>
+      <div class="login-err" id="login-err">❌ Usuario o contraseña incorrectos</div>
     </div>
-
-    <div class="login-err" id="login-err">❌ Usuario o contraseña incorrectos</div>
   </div>
 </div>
 
-<!-- MODAL REGISTRO GYM (aparece al primer ingreso) -->
-<div class="modal-overlay" id="modal-registro-gym">
-  <div class="modal modal-registro">
-    <div class="modal-handle"></div>
-    <div class="registro-welcome">
-      <div class="registro-icon">🏋️</div>
-      <div class="modal-title" style="margin-bottom:6px">¡Bienvenido!</div>
-      <p class="registro-desc">Para comenzar, ponle nombre a tu gimnasio.<br>Aparecerá en toda la aplicación.</p>
+<!-- ══════════════════════════════════════════════
+     SUPER ADMIN
+══════════════════════════════════════════════ -->
+<div id="superadmin-screen" style="display:none">
+  <div class="landing-bg"></div>
+  <div class="auth-wrap">
+    <button class="back-btn" onclick="volverLanding()">← Volver</button>
+    <div class="brand-logo" style="font-size:32px;margin-bottom:4px">SUPERADMIN</div>
+    <div class="brand-tagline" style="margin-bottom:24px">Panel de Administración</div>
+
+    <div id="sa-login-wrap" class="login-card" style="max-width:360px">
+      <div class="login-title">🛡️ Acceso SuperAdmin</div>
+      <div class="field-wrap">
+        <label class="field-label">Contraseña maestra</label>
+        <input id="sa-pass" class="inp pass" type="password" placeholder="••••"
+          onkeydown="if(event.key==='Enter') loginSuperAdmin()">
+      </div>
+      <button class="btn-gold" onclick="loginSuperAdmin()">ACCEDER →</button>
+      <div id="sa-err" class="login-err">❌ Contraseña incorrecta</div>
     </div>
-    <div class="field-wrap" style="margin-bottom:8px">
-      <label class="field-label">Nombre de tu Gym</label>
-      <input id="registro-gym-name" class="inp" type="text" placeholder="Ej: PowerFit Gym" maxlength="32" oninput="previewGymName(this.value)">
+
+    <div id="sa-panel" style="display:none;width:100%;max-width:640px">
+      <div class="sa-header">
+        <div>
+          <div style="font-size:20px;font-weight:900;color:var(--gold)">Panel de Gyms</div>
+          <div id="sa-stats-txt" style="font-size:13px;color:var(--muted)">Cargando...</div>
+        </div>
+        <button class="btn-gold" onclick="exportarSAExcel()" style="width:auto;padding:10px 18px;font-size:12px">📊 Exportar</button>
+      </div>
+      <div id="sa-gyms-list"></div>
     </div>
-    <p class="registro-hint">Puedes cambiarlo después en ⚙️ Config</p>
-    <button class="btn-gold" id="btn-confirmar-registro" onclick="confirmarRegistroGym()" style="margin-top:8px">
-      COMENZAR →
-    </button>
   </div>
 </div>
 
-<!-- APP -->
+<!-- ══════════════════════════════════════════════
+     APP PRINCIPAL (por gym)
+══════════════════════════════════════════════ -->
 <div id="app">
   <div class="topbar">
-    <div class="topbar-logo" id="topbar-logo-text">GYM</div>
+    <div class="topbar-left">
+      <div class="topbar-logo" id="topbar-logo-text">GYM</div>
+      <div class="gymid-pill" id="topbar-gymid">@id</div>
+    </div>
     <div class="topbar-right">
-      <button class="btn-sm btn-outline" id="btn-notif-perm" style="display:none">🔔 Activar</button>
-      <!-- Avatar usuario -->
+      <div class="plan-indicator" id="plan-indicator">FREE</div>
+      <button class="btn-sm btn-outline" id="btn-notif-perm" style="display:none">🔔</button>
       <div class="user-avatar-btn" id="topbar-avatar" onclick="toggleUserMenu()">
-        <img id="topbar-avatar-img" src="" alt="" style="display:none; width:32px; height:32px; border-radius:50%; object-fit:cover;">
+        <img id="topbar-avatar-img" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;object-fit:cover;">
         <span id="topbar-avatar-initials"></span>
       </div>
       <button class="btn-sm btn-red" id="btn-logout">Salir</button>
     </div>
   </div>
 
-  <!-- USER MENU DROPDOWN -->
+  <!-- USER MENU -->
   <div id="user-menu" class="user-menu" style="display:none">
     <div class="user-menu-header">
       <div id="menu-avatar-wrap" class="menu-avatar"></div>
       <div>
         <div id="menu-user-name" class="menu-user-name">—</div>
         <div id="menu-user-email" class="menu-user-email">—</div>
+        <div id="menu-gym-id" style="font-size:10px;color:var(--gold);margin-top:2px;font-weight:700"></div>
       </div>
     </div>
     <hr class="menu-divider">
-    <button class="menu-item" onclick="irAConfigUsuario()">⚙️ Configuración de usuario</button>
+    <button class="menu-item" onclick="irAConfigUsuario()">⚙️ Configuración</button>
+    <button class="menu-item" onclick="copiarLinkGym()">🔗 Copiar link del gym</button>
+    <hr class="menu-divider">
     <button class="menu-item menu-item-red" onclick="doLogout()">🚪 Cerrar sesión</button>
   </div>
 
@@ -109,60 +250,56 @@
     <button class="tab" data-tab="alertas">🔔 Alertas</button>
     <button class="tab" data-tab="config">⚙️ Config</button>
   </div>
+
   <div class="body">
-    <!-- STATS -->
     <div class="pane active" id="pane-stats">
-      <div id="stats-content"><div class="empty-state"><div class="empty-icon">📊</div>Cargando estadísticas...</div></div>
+      <div id="stats-content"><div class="empty-state"><div class="empty-icon">📊</div>Cargando...</div></div>
     </div>
-    <!-- CLIENTES -->
     <div class="pane" id="pane-clientes">
       <div class="search-bar">
         <input class="search-inp" id="search-inp" placeholder="🔍 Buscar cliente..." oninput="renderClientes()">
         <button class="btn-add-cliente" onclick="abrirModalNuevo()">+ Nuevo</button>
       </div>
       <div class="filter-row">
-        <button class="filter-btn active" data-filter="todos" onclick="setFiltro(this,'todos')">Todos</button>
-        <button class="filter-btn f-green" data-filter="activo" onclick="setFiltro(this,'activo')">✅ Al día</button>
-        <button class="filter-btn f-yellow" data-filter="por-vencer" onclick="setFiltro(this,'por-vencer')">⚠️ Por vencer</button>
-        <button class="filter-btn f-red" data-filter="vencido" onclick="setFiltro(this,'vencido')">❌ Vencidos</button>
+        <button class="filter-btn active" onclick="setFiltro(this,'todos')">Todos</button>
+        <button class="filter-btn f-green" onclick="setFiltro(this,'activo')">✅ Al día</button>
+        <button class="filter-btn f-yellow" onclick="setFiltro(this,'por-vencer')">⚠️ Por vencer</button>
+        <button class="filter-btn f-red" onclick="setFiltro(this,'vencido')">❌ Vencidos</button>
       </div>
       <div class="export-bar">
-        <button class="btn-export" onclick="exportarExcel()">📊 Exportar Excel</button>
-        <button class="btn-export btn-export-pdf" onclick="exportarPDF()">📄 Exportar PDF</button>
+        <button class="btn-export" onclick="exportarExcel()">📊 Excel</button>
+        <button class="btn-export btn-export-pdf" onclick="exportarPDF()">📄 PDF</button>
       </div>
       <div id="lista-clientes"></div>
     </div>
-    <!-- CAJA -->
     <div class="pane" id="pane-caja">
       <div id="caja-content"><div class="empty-state"><div class="empty-icon">💰</div>Cargando...</div></div>
     </div>
-    <!-- ALERTAS -->
     <div class="pane" id="pane-alertas">
       <div id="alertas-content"></div>
     </div>
-    <!-- CONFIG -->
     <div class="pane" id="pane-config">
       <div id="config-content"></div>
     </div>
   </div>
 </div>
 
-<!-- MODAL NUEVO/EDITAR CLIENTE -->
+<!-- ══ MODALES ══ -->
+
+<!-- Modal Nuevo/Editar Cliente -->
 <div class="modal-overlay" id="modal-cliente">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-titulo">NUEVO CLIENTE</div>
-    <div id="save-indicator" class="save-indicator">
-      <span id="save-text">Sin cambios</span>
-    </div>
+    <div id="save-indicator" class="save-indicator"><span id="save-text">Sin cambios</span></div>
     <div class="modal-grid">
       <div class="form-group full">
         <label class="form-label">Nombre completo *</label>
-        <input class="form-inp" id="f-nombre" type="text" placeholder="Ej: Juan Pérez" oninput="autoGuardar()">
+        <input class="form-inp" id="f-nombre" type="text" placeholder="Juan Pérez" oninput="autoGuardar()">
       </div>
       <div class="form-group">
         <label class="form-label">Cédula</label>
-        <input class="form-inp" id="f-cedula" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456789" oninput="autoGuardar()">
+        <input class="form-inp" id="f-cedula" type="text" inputmode="numeric" placeholder="123456789" oninput="autoGuardar()">
       </div>
       <div class="form-group">
         <label class="form-label">Teléfono</label>
@@ -173,7 +310,7 @@
         <select class="form-inp" id="f-plan" onchange="onPlanChange()"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">Valor a cobrar (COP) ✏️</label>
+        <label class="form-label">Valor (COP) ✏️</label>
         <input class="form-inp" id="f-valor" type="text" inputmode="numeric" placeholder="80000" oninput="autoGuardar()">
       </div>
       <div class="form-group full">
@@ -192,14 +329,14 @@
   </div>
 </div>
 
-<!-- MODAL RENOVAR -->
+<!-- Modal Renovar -->
 <div class="modal-overlay" id="modal-renovar">
   <div class="modal" style="max-height:60vh">
     <div class="modal-handle"></div>
     <div class="modal-title">RENOVAR MEMBRESÍA</div>
     <div id="renovar-nombre-label" style="font-size:14px;color:var(--muted);margin-bottom:16px"></div>
     <div class="form-group" style="margin-bottom:12px">
-      <label class="form-label">Valor cobrado (COP) ✏️</label>
+      <label class="form-label">Valor cobrado (COP)</label>
       <input class="form-inp" id="renovar-valor" type="text" inputmode="numeric" placeholder="80000">
     </div>
     <div class="modal-actions">
@@ -209,7 +346,7 @@
   </div>
 </div>
 
-<!-- MODAL DETALLE -->
+<!-- Modal Detalle -->
 <div class="modal-overlay" id="modal-detalle">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -217,14 +354,12 @@
   </div>
 </div>
 
-<!-- MODAL CONFIG USUARIO -->
+<!-- Modal Config Usuario -->
 <div class="modal-overlay" id="modal-user-config">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">MI PERFIL</div>
-
-    <!-- Avatar editable -->
-    <div style="text-align:center; margin-bottom:24px;">
+    <div style="text-align:center;margin-bottom:24px">
       <div class="avatar-edit-wrap" onclick="document.getElementById('avatar-file-input').click()">
         <div id="avatar-preview" class="avatar-preview-big"></div>
         <div class="avatar-edit-overlay">📷 Cambiar</div>
@@ -232,41 +367,39 @@
       <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="handleAvatarChange(event)">
       <p style="font-size:11px;color:var(--muted);margin-top:8px">Toca para cambiar foto</p>
     </div>
-
     <div class="form-group" style="margin-bottom:14px">
       <label class="form-label">Nombre de usuario</label>
       <input class="form-inp" id="user-display-name" type="text" placeholder="Tu nombre">
     </div>
-
-    <!-- SECCIÓN COLORES -->
     <div class="config-card" style="margin-bottom:14px">
       <h3>🎨 Color del tema</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Personaliza el color principal de la app</p>
       <div class="color-presets">
-        <button class="color-preset" data-color="#D4AF37" style="background:#D4AF37" title="Dorado (default)" onclick="selectColorPreset('#D4AF37', this)"></button>
-        <button class="color-preset" data-color="#e53e3e" style="background:#e53e3e" title="Rojo" onclick="selectColorPreset('#e53e3e', this)"></button>
-        <button class="color-preset" data-color="#3182ce" style="background:#3182ce" title="Azul" onclick="selectColorPreset('#3182ce', this)"></button>
-        <button class="color-preset" data-color="#38a169" style="background:#38a169" title="Verde" onclick="selectColorPreset('#38a169', this)"></button>
-        <button class="color-preset" data-color="#805ad5" style="background:#805ad5" title="Morado" onclick="selectColorPreset('#805ad5', this)"></button>
-        <button class="color-preset" data-color="#dd6b20" style="background:#dd6b20" title="Naranja" onclick="selectColorPreset('#dd6b20', this)"></button>
-        <button class="color-preset" data-color="#00b5d8" style="background:#00b5d8" title="Cian" onclick="selectColorPreset('#00b5d8', this)"></button>
-        <button class="color-preset" data-color="#d53f8c" style="background:#d53f8c" title="Rosa" onclick="selectColorPreset('#d53f8c', this)"></button>
+        <button class="color-preset" data-color="#D4AF37" style="background:#D4AF37" onclick="selectColorPreset('#D4AF37',this)"></button>
+        <button class="color-preset" data-color="#e53e3e" style="background:#e53e3e" onclick="selectColorPreset('#e53e3e',this)"></button>
+        <button class="color-preset" data-color="#3182ce" style="background:#3182ce" onclick="selectColorPreset('#3182ce',this)"></button>
+        <button class="color-preset" data-color="#38a169" style="background:#38a169" onclick="selectColorPreset('#38a169',this)"></button>
+        <button class="color-preset" data-color="#805ad5" style="background:#805ad5" onclick="selectColorPreset('#805ad5',this)"></button>
+        <button class="color-preset" data-color="#dd6b20" style="background:#dd6b20" onclick="selectColorPreset('#dd6b20',this)"></button>
+        <button class="color-preset" data-color="#00b5d8" style="background:#00b5d8" onclick="selectColorPreset('#00b5d8',this)"></button>
+        <button class="color-preset" data-color="#d53f8c" style="background:#d53f8c" onclick="selectColorPreset('#d53f8c',this)"></button>
       </div>
-      <div style="display:flex; align-items:center; gap:12px; margin-top:14px">
-        <label class="form-label" style="margin:0; white-space:nowrap">Color personalizado:</label>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
+        <label class="form-label" style="margin:0">Personalizado:</label>
         <input type="color" id="custom-color-picker" value="#D4AF37"
           style="width:48px;height:36px;border:1.5px solid var(--border);border-radius:8px;background:var(--dark4);cursor:pointer;padding:2px"
-          oninput="applyThemeColor(this.value, true)">
+          oninput="applyThemeColor(this.value,true)">
         <span id="color-hex-display" style="font-size:13px;color:var(--muted);font-family:monospace">#D4AF37</span>
       </div>
     </div>
-
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cerrarModalUserConfig()">Cancelar</button>
       <button class="btn-guardar" onclick="guardarConfigUsuario()">💾 GUARDAR</button>
     </div>
   </div>
 </div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -275,9 +408,7 @@
 <script src="app.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('SW registrado'))
-      .catch(e => console.log('SW error:', e));
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 </script>
 </body>
