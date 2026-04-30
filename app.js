@@ -1433,12 +1433,13 @@
   let _saGymsCache = [];
 
   window.saTab = function(tab, btn) {
-    ['estadisticas','gyms','riesgo'].forEach(t => {
-      document.getElementById('sa-tab-' + t).style.display = t === tab ? 'block' : 'none';
+    ['estadisticas','gyms','riesgo','pagos'].forEach(t => {
+      const el = document.getElementById('sa-tab-' + t); if (el) el.style.display = t === tab ? 'block' : 'none';
     });
     document.querySelectorAll('.sa-tab').forEach(b => b.classList.remove('sa-tab-active'));
     btn.classList.add('sa-tab-active');
   };
+    if (tab === 'pagos') cargarSolicitudesPago();
 
   window.filtrarGyms = function() {
     const q = (document.getElementById('sa-search')?.value || '').toLowerCase().trim();
@@ -1610,5 +1611,297 @@
       XLSX.writeFile(wb, `GymPanel_gyms_${getFechaHoy()}.xlsx`);
     });
   };
+
+
+  // ══════════════════════════════════════════════
+  // SISTEMA DE PAGOS — SUSCRIPCIÓN DE GYMS
+  // ══════════════════════════════════════════════
+
+  const PLANES_CONFIG = {
+    free:       { nombre: 'Free',       precio_mes: 0,      precio_anual: 0,      clientes_max: 30,  features: ['Hasta 30 clientes', 'Panel básico', 'Exportar Excel'] },
+    pro:        { nombre: 'Pro',        precio_mes: 29900,  precio_anual: 299000, clientes_max: 999, features: ['Clientes ilimitados', 'Historial de pagos', 'WhatsApp masivo', 'Múltiples admins', 'Soporte prioritario'] },
+    enterprise: { nombre: 'Enterprise', precio_mes: 79900,  precio_anual: 799000, clientes_max: 9999,features: ['Todo Pro', 'Múltiples sedes', 'API acceso', 'Onboarding personalizado'] }
+  };
+
+  const NEQUI_NUM    = '3001234567';   // ← cambia por tu número Nequi
+  const BANCOLOMBIA_NUM = '123-456789-12'; // ← cambia por tu cuenta Bancolombia
+
+  // Chequear si el gym tiene plan activo o debe pagar
+  function checkSuscripcion() {
+    if (!currentGymId) return;
+    const plan = gymConfig.plan || 'free';
+    if (plan === 'free') return; // free no vence
+
+    const vence = gymConfig.planVence;
+    if (!vence) return;
+
+    const ahora = Date.now();
+    const diasRestantes = Math.ceil((vence - ahora) / 86400000);
+
+    if (diasRestantes <= 0) {
+      // Suspender automáticamente
+      db.ref(`gyms/${currentGymId}/config/activo`).set(false);
+      db.ref(`gyms/${currentGymId}/config/plan`).set('free');
+      showToast('⚠️ Tu plan venció. Ahora estás en Free.', 'red');
+      gymConfig.plan = 'free';
+      gymConfig.activo = false;
+      actualizarPlanIndicator();
+      mostrarModalPago();
+    } else if (diasRestantes <= 5) {
+      // Aviso de vencimiento próximo
+      const banner = document.getElementById('banner-pago');
+      if (banner) {
+        banner.style.display = 'flex';
+        banner.querySelector('.banner-txt').textContent =
+          `⚠️ Tu plan ${plan.toUpperCase()} vence en ${diasRestantes} día${diasRestantes!==1?'s':''}. ¡Renueva para no perder acceso!`;
+      }
+    }
+  }
+
+  // Abrir modal de pago/upgrade
+  window.mostrarModalPago = function(planObjetivo) {
+    const modal = document.getElementById('modal-pago');
+    if (!modal) { _inyectarModalPago(); }
+    _renderModalPago(planObjetivo || null);
+    document.getElementById('modal-pago').classList.add('open');
+  };
+
+  function _inyectarModalPago() {
+    const div = document.createElement('div');
+    div.id = 'modal-pago';
+    div.className = 'modal-overlay';
+    div.innerHTML = `<div class="modal-box" style="max-width:520px;max-height:90vh;overflow-y:auto">
+      <div id="modal-pago-content"></div>
+    </div>`;
+    div.addEventListener('click', e => { if (e.target === div) div.classList.remove('open'); });
+    document.body.appendChild(div);
+  }
+
+  function _renderModalPago(planObjetivo) {
+    const planActual = gymConfig.plan || 'free';
+    const content = document.getElementById('modal-pago-content');
+    if (!content) return;
+
+    content.innerHTML = `
+      <div style="padding:24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <h2 style="font-size:18px;font-weight:800;color:var(--gold);margin:0">⚡ Planes GymPanel</h2>
+          <button onclick="document.getElementById('modal-pago').classList.remove('open')"
+            style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+        </div>
+
+        <!-- Selector mensual/anual -->
+        <div style="display:flex;background:var(--dark4);border-radius:10px;padding:4px;margin-bottom:20px;gap:4px">
+          <button id="btn-periodo-mes" onclick="setPeriodoPago('mes')"
+            style="flex:1;padding:8px;border-radius:8px;border:none;font-family:'Barlow',sans-serif;font-weight:700;font-size:13px;cursor:pointer;background:var(--gold);color:#000">
+            Mensual
+          </button>
+          <button id="btn-periodo-anual" onclick="setPeriodoPago('anual')"
+            style="flex:1;padding:8px;border-radius:8px;border:none;font-family:'Barlow',sans-serif;font-weight:700;font-size:13px;cursor:pointer;background:transparent;color:var(--muted)">
+            Anual <span style="font-size:10px;color:#22c55e">−17%</span>
+          </button>
+        </div>
+
+        <!-- Cards de planes -->
+        <div id="planes-pago-grid" style="display:flex;flex-direction:column;gap:12px">
+          ${Object.entries(PLANES_CONFIG).map(([key, p]) => {
+            const esActual = key === planActual;
+            const precio = window._periodoPago === 'anual' ? p.precio_anual : p.precio_mes;
+            const precioLabel = precio === 0 ? 'Gratis' : '$' + precio.toLocaleString('es-CO') + (window._periodoPago === 'anual' ? '/año' : '/mes');
+            return `<div style="border:2px solid ${esActual ? 'var(--gold)' : 'var(--border)'};border-radius:14px;padding:16px;position:relative">
+              ${esActual ? '<div style="position:absolute;top:-10px;right:12px;background:var(--gold);color:#000;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px">PLAN ACTUAL</div>' : ''}
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <span style="font-weight:800;font-size:15px;color:var(--text)">${p.nombre}</span>
+                <span style="font-weight:800;font-size:17px;color:var(--gold)">${precioLabel}</span>
+              </div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${p.features.join(' · ')}</div>
+              ${!esActual && precio > 0 ? `<button onclick="iniciarPago('${key}')"
+                style="width:100%;padding:10px;background:var(--gold);color:#000;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-weight:800;font-size:13px;cursor:pointer">
+                Obtener ${p.nombre}
+              </button>` : ''}
+              ${esActual && precio > 0 ? `<button onclick="iniciarPago('${key}')"
+                style="width:100%;padding:10px;background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:8px;font-family:'Barlow',sans-serif;font-weight:800;font-size:13px;cursor:pointer">
+                🔄 Renovar plan
+              </button>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    window._periodoPago = window._periodoPago || 'mes';
+  }
+
+  window._periodoPago = 'mes';
+
+  window.setPeriodoPago = function(periodo) {
+    window._periodoPago = periodo;
+    const btnMes   = document.getElementById('btn-periodo-mes');
+    const btnAnual = document.getElementById('btn-periodo-anual');
+    if (btnMes)   { btnMes.style.background   = periodo === 'mes'   ? 'var(--gold)' : 'transparent'; btnMes.style.color   = periodo === 'mes'   ? '#000' : 'var(--muted)'; }
+    if (btnAnual) { btnAnual.style.background = periodo === 'anual' ? 'var(--gold)' : 'transparent'; btnAnual.style.color = periodo === 'anual' ? '#000' : 'var(--muted)'; }
+    _renderModalPago(null);
+  };
+
+  window.iniciarPago = function(planKey) {
+    const p = PLANES_CONFIG[planKey];
+    const periodo = window._periodoPago || 'mes';
+    const precio = periodo === 'anual' ? p.precio_anual : p.precio_mes;
+    const content = document.getElementById('modal-pago-content');
+    if (!content) return;
+
+    const ref = `GYM-${currentGymId}-${planKey}-${Date.now()}`;
+
+    content.innerHTML = `
+      <div style="padding:24px">
+        <button onclick="mostrarModalPago()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;margin-bottom:16px">← Volver</button>
+        <h2 style="font-size:17px;font-weight:800;color:var(--gold);margin-bottom:4px">Plan ${p.nombre} — ${periodo === 'anual' ? 'Anual' : 'Mensual'}</h2>
+        <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:20px">$${precio.toLocaleString('es-CO')} COP</div>
+
+        <div style="background:var(--dark4);border-radius:12px;padding:16px;margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Elige cómo pagar</div>
+
+          <!-- Nequi -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+            <div style="font-weight:800;font-size:14px;color:#8B5CF6;margin-bottom:6px">💜 Nequi</div>
+            <div style="font-size:13px;color:var(--text)">Envía <strong>$${precio.toLocaleString('es-CO')}</strong> al número:</div>
+            <div style="font-size:20px;font-weight:800;color:var(--text);margin:6px 0;letter-spacing:2px">${NEQUI_NUM}</div>
+            <div style="font-size:11px;color:var(--muted)">Concepto: <code style="background:var(--dark3);padding:2px 6px;border-radius:4px">${ref}</code></div>
+          </div>
+
+          <!-- Bancolombia -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:14px">
+            <div style="font-weight:800;font-size:14px;color:#FBBF24;margin-bottom:6px">🏦 Bancolombia</div>
+            <div style="font-size:13px;color:var(--text)">Transfiere <strong>$${precio.toLocaleString('es-CO')}</strong> a:</div>
+            <div style="font-size:16px;font-weight:800;color:var(--text);margin:6px 0">${BANCOLOMBIA_NUM}</div>
+            <div style="font-size:11px;color:var(--muted)">Concepto: <code style="background:var(--dark3);padding:2px 6px;border-radius:4px">${ref}</code></div>
+          </div>
+        </div>
+
+        <!-- Notificar pago -->
+        <div style="background:var(--dark4);border-radius:12px;padding:16px;margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Ya pagaste? Notifícanos</div>
+          <input id="pago-comprobante" class="form-inp" placeholder="Número de comprobante o últimos 4 dígitos" style="margin-bottom:8px">
+          <button onclick="enviarNotificacionPago('${planKey}','${periodo}','${ref}',${precio})"
+            style="width:100%;padding:12px;background:var(--gold);color:#000;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-weight:800;font-size:14px;cursor:pointer">
+            ✅ Ya pagué — Notificar
+          </button>
+        </div>
+
+        <div style="font-size:11px;color:var(--muted);text-align:center">
+          Activamos tu plan en menos de 24 horas hábiles después de verificar el pago.
+        </div>
+      </div>`;
+  };
+
+  window.enviarNotificacionPago = function(planKey, periodo, ref, precio) {
+    const comprobante = document.getElementById('pago-comprobante')?.value.trim();
+    if (!comprobante) { showToast('❌ Ingresa el número de comprobante', 'red'); return; }
+
+    // Guardar solicitud de pago en Firebase para que SuperAdmin la vea
+    db.ref(`_solicitudesPago/${currentGymId}_${Date.now()}`).set({
+      gymId: currentGymId,
+      gymNombre: gymConfig.nombre || currentGymId,
+      plan: planKey,
+      periodo,
+      precio,
+      ref,
+      comprobante,
+      ts: Date.now(),
+      estado: 'pendiente'
+    }).then(() => {
+      const content = document.getElementById('modal-pago-content');
+      if (content) content.innerHTML = `
+        <div style="padding:40px;text-align:center">
+          <div style="font-size:48px;margin-bottom:16px">✅</div>
+          <h2 style="color:var(--gold);margin-bottom:8px">¡Notificación enviada!</h2>
+          <p style="color:var(--muted);font-size:14px">Verificaremos tu pago y activaremos el plan <strong>${planKey.toUpperCase()}</strong> en menos de 24 horas.</p>
+          <p style="color:var(--muted);font-size:12px;margin-top:8px">Referencia: <code style="color:var(--gold)">${ref}</code></p>
+          <button onclick="document.getElementById('modal-pago').classList.remove('open')"
+            style="margin-top:20px;padding:12px 28px;background:var(--gold);color:#000;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-weight:800;font-size:14px;cursor:pointer">
+            Cerrar
+          </button>
+        </div>`;
+    }).catch(() => showToast('❌ Error al enviar. Intenta de nuevo.', 'red'));
+  };
+
+  // ── SuperAdmin: ver solicitudes de pago pendientes ──
+  window.cargarSolicitudesPago = function() {
+    const cont = document.getElementById('sa-pagos-pendientes');
+    if (!cont) return;
+    cont.innerHTML = '<div style="color:var(--muted);font-size:13px">Cargando...</div>';
+
+    db.ref('_solicitudesPago').orderByChild('estado').equalTo('pendiente').once('value').then(snap => {
+      const sols = snap.val() || {};
+      const arr = Object.entries(sols).sort((a,b) => b[1].ts - a[1].ts);
+
+      if (!arr.length) {
+        cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">✅ Sin solicitudes pendientes</div>';
+        return;
+      }
+
+      cont.innerHTML = arr.map(([key, s]) => `
+        <div style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div>
+              <div style="font-weight:800;font-size:14px;color:var(--text)">${s.gymNombre} <span style="color:var(--gold);font-size:12px">@${s.gymId}</span></div>
+              <div style="font-size:12px;color:var(--muted)">Plan <strong>${s.plan.toUpperCase()}</strong> ${s.periodo} — $${(s.precio||0).toLocaleString('es-CO')} COP</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">Comprobante: <code style="color:var(--gold)">${s.comprobante}</code> · Ref: ${s.ref}</div>
+              <div style="font-size:11px;color:var(--muted)">${new Date(s.ts).toLocaleString('es-CO')}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="aprobarPago('${key}','${s.gymId}','${s.plan}','${s.periodo}')"
+              style="flex:1;padding:9px;background:#22c55e22;border:1px solid #22c55e55;border-radius:8px;color:#22c55e;font-family:'Barlow',sans-serif;font-weight:700;font-size:12px;cursor:pointer">
+              ✅ Aprobar y activar
+            </button>
+            <button onclick="rechazarPago('${key}','${s.gymId}')"
+              style="flex:1;padding:9px;background:#ef444422;border:1px solid #ef444455;border-radius:8px;color:#ef4444;font-family:'Barlow',sans-serif;font-weight:700;font-size:12px;cursor:pointer">
+              ❌ Rechazar
+            </button>
+          </div>
+        </div>`).join('');
+    });
+  };
+
+  window.aprobarPago = function(key, gymId, planKey, periodo) {
+    if (!confirm(`¿Activar plan ${planKey.toUpperCase()} para @${gymId}?`)) return;
+    const diasPlan = periodo === 'anual' ? 365 : 30;
+    const vence = Date.now() + diasPlan * 86400000;
+
+    db.ref(`gyms/${gymId}/config`).update({ plan: planKey, activo: true, planVence: vence, planPeriodo: periodo })
+      .then(() => db.ref(`_solicitudesPago/${key}`).update({ estado: 'aprobado', aprobadoEn: Date.now() }))
+      .then(() => {
+        showToast('✅ Plan activado para @' + gymId, 'green');
+        cargarSolicitudesPago();
+        cargarPanelSA();
+      });
+  };
+
+  window.rechazarPago = function(key, gymId) {
+    if (!confirm(`¿Rechazar solicitud de @${gymId}?`)) return;
+    db.ref(`_solicitudesPago/${key}`).update({ estado: 'rechazado', rechazadoEn: Date.now() })
+      .then(() => {
+        showToast('Solicitud rechazada', 'red');
+        cargarSolicitudesPago();
+      });
+  };
+
+  // Hook: al entrar al app, chequear suscripción
+  const _entrarAlAppOriginal = entrarAlApp;
+  function entrarAlApp() {
+    _entrarAlAppOriginal();
+    setTimeout(checkSuscripcion, 1500);
+  }
+
+  // Banner de pago (se inyecta si no existe)
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('banner-pago')) {
+      const banner = document.createElement('div');
+      banner.id = 'banner-pago';
+      banner.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#92400e;color:#fef3c7;padding:10px 16px;font-size:13px;font-weight:700;align-items:center;justify-content:space-between;gap:10px';
+      banner.innerHTML = `<span class="banner-txt"></span>
+        <button onclick="mostrarModalPago()" style="padding:6px 14px;background:#fef3c7;color:#92400e;border:none;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer">Renovar ahora</button>`;
+      document.body.prepend(banner);
+    }
+  });
 
 })();
