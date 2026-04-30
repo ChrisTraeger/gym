@@ -205,15 +205,68 @@
       <div id="sa-err" class="login-err">❌ Usuario o contraseña incorrectos</div>
     </div>
 
-    <div id="sa-panel" style="display:none;width:100%;max-width:640px">
+    <div id="sa-panel" style="display:none;width:100%;max-width:780px">
       <div class="sa-header">
         <div>
-          <div style="font-size:20px;font-weight:900;color:var(--gold)">Panel de Gyms</div>
+          <div style="font-size:20px;font-weight:900;color:var(--gold)">SuperAdmin Panel</div>
           <div id="sa-stats-txt" style="font-size:13px;color:var(--muted)">Cargando...</div>
         </div>
         <button class="btn-gold" onclick="exportarSAExcel()" style="width:auto;padding:10px 18px;font-size:12px">📊 Exportar</button>
       </div>
-      <div id="sa-gyms-list"></div>
+
+      <div class="sa-tabs">
+        <button class="sa-tab sa-tab-active" onclick="saTab('estadisticas',this)">📊 Estadísticas</button>
+        <button class="sa-tab" onclick="saTab('gyms',this)">🏋️ Gyms</button>
+        <button class="sa-tab" onclick="saTab('riesgo',this)">⚠️ En riesgo</button>
+      </div>
+
+      <div id="sa-tab-estadisticas">
+        <div class="sa-kpi-grid">
+          <div class="sa-kpi-card">
+            <div class="sa-kpi-label">Gyms activos</div>
+            <div class="sa-kpi-val" id="kpi-gyms">—</div>
+            <div class="sa-kpi-sub" id="kpi-gyms-sub"></div>
+          </div>
+          <div class="sa-kpi-card">
+            <div class="sa-kpi-label">Clientes totales</div>
+            <div class="sa-kpi-val" id="kpi-clientes">—</div>
+            <div class="sa-kpi-sub" id="kpi-clientes-sub"></div>
+          </div>
+          <div class="sa-kpi-card">
+            <div class="sa-kpi-label">Promedio clientes/gym</div>
+            <div class="sa-kpi-val" id="kpi-promedio">—</div>
+            <div class="sa-kpi-sub">Por gimnasio</div>
+          </div>
+          <div class="sa-kpi-card">
+            <div class="sa-kpi-label">Gyms suspendidos</div>
+            <div class="sa-kpi-val" id="kpi-inactivos" style="color:var(--red)">—</div>
+            <div class="sa-kpi-sub">Inactivos</div>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="sa-section-title">Distribución de planes</div>
+          <div class="sa-planes-grid" id="sa-planes-grid"></div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="sa-section-title">Top 5 gyms por clientes</div>
+          <div id="sa-top-gyms"></div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="sa-section-title">Gyms por ciudad</div>
+          <div id="sa-ciudades"></div>
+        </div>
+      </div>
+
+      <div id="sa-tab-gyms" style="display:none">
+        <div style="margin-bottom:12px">
+          <input id="sa-search" class="inp" type="text" placeholder="🔍  Buscar por nombre, ID o ciudad…" oninput="filtrarGyms()" style="margin:0">
+        </div>
+        <div id="sa-gyms-list"></div>
+      </div>
+
+      <div id="sa-tab-riesgo" style="display:none">
+        <div id="sa-riesgo-list"></div>
+      </div>
     </div>
   </div>
 </div>
