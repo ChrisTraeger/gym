@@ -32,11 +32,20 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     fetch(e.request)
       .then(res => {
+        if (!res || !res.ok) return res;
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(() =>
+        caches.match(e.request).then(cached =>
+          cached || new Response('Sin conexión', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+          })
+        )
+      )
   );
 });
 
