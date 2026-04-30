@@ -48,7 +48,7 @@
         <button class="btn-gold btn-outline-gold" onclick="mostrarRegistro()" style="margin-top:16px">CREAR CUENTA GRATIS →</button>
         <div class="plan-badges">
           <span class="plan-badge">✅ Gratis para siempre</span>
-          <span class="plan-badge">✅ Hasta 50 clientes</span>
+          <span class="plan-badge">✅ Hasta 30 clientes</span>
           <span class="plan-badge">✅ Sin contratos</span>
         </div>
       </div>
@@ -218,6 +218,11 @@
         <button class="sa-tab sa-tab-active" onclick="saTab('estadisticas',this)">📊 Estadísticas</button>
         <button class="sa-tab" onclick="saTab('gyms',this)">🏋️ Gyms</button>
         <button class="sa-tab" onclick="saTab('riesgo',this)">⚠️ En riesgo</button>
+        <!-- ★ NUEVO: pestaña de pagos pendientes -->
+        <button class="sa-tab" onclick="saTab('pagos',this)" style="position:relative">
+          💳 Pagos
+          <span id="sa-pagos-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:10px">!</span>
+        </button>
       </div>
 
       <div id="sa-tab-estadisticas">
@@ -267,6 +272,17 @@
       <div id="sa-tab-riesgo" style="display:none">
         <div id="sa-riesgo-list"></div>
       </div>
+
+      <!-- ★ NUEVO: tab de pagos pendientes -->
+      <div id="sa-tab-pagos" style="display:none">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px">
+          Solicitudes de pago enviadas por los gyms. Verifica el comprobante y aprueba o rechaza.
+        </div>
+        <div id="sa-pagos-pendientes">
+          <div style="color:var(--muted);font-size:13px;padding:12px">Cargando...</div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -281,7 +297,8 @@
       <div class="gymid-pill" id="topbar-gymid">@id</div>
     </div>
     <div class="topbar-right">
-      <div class="plan-indicator" id="plan-indicator">FREE</div>
+      <!-- ★ Plan ahora es clickeable para ver upgrade -->
+      <div class="plan-indicator" id="plan-indicator" onclick="mostrarModalPago()" style="cursor:pointer" title="Ver planes">FREE</div>
       <button class="btn-sm btn-outline" id="btn-notif-perm" style="display:none">🔔</button>
       <div class="user-avatar-btn" id="topbar-avatar" onclick="toggleUserMenu()">
         <img id="topbar-avatar-img" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;object-fit:cover;">
@@ -304,6 +321,8 @@
     <hr class="menu-divider">
     <button class="menu-item" onclick="irAConfigUsuario()">⚙️ Configuración</button>
     <button class="menu-item" onclick="copiarLinkGym()">🔗 Copiar link del gym</button>
+    <!-- ★ Acceso rápido a planes desde el menú -->
+    <button class="menu-item" onclick="toggleUserMenu();mostrarModalPago()">⚡ Ver planes / Renovar</button>
     <hr class="menu-divider">
     <button class="menu-item menu-item-red" onclick="doLogout()">🚪 Cerrar sesión</button>
   </div>
@@ -463,6 +482,13 @@
   </div>
 </div>
 
+<!-- ★ NUEVO: Modal de Pagos/Planes (inyectado por JS, pero el overlay va aquí como fallback) -->
+<div class="modal-overlay" id="modal-pago" style="display:none">
+  <div class="modal-box" style="max-width:520px;max-height:90vh;overflow-y:auto;background:var(--dark2);border-radius:20px;width:calc(100% - 32px)">
+    <div id="modal-pago-content"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
@@ -472,6 +498,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="app.js"></script>
 <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+</script>
+</body>
+</html>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
