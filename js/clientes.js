@@ -75,14 +75,19 @@ function _ejecutarGuardado(cerrar) {
 // ══════════════════════════════════════════════
 window.abrirModalNuevo = function() {
   clienteEditandoId = null;
-  document.getElementById('modal-titulo').textContent   = 'NUEVO CLIENTE';
+  document.getElementById('modal-titulo').textContent = 'NUEVO CLIENTE';
   document.getElementById('f-nombre').value  = '';
   document.getElementById('f-cedula').value  = '';
   document.getElementById('f-tel').value     = '';
   document.getElementById('f-notas').value   = '';
   document.getElementById('f-inicio').value  = getFechaHoy();
   cargarPlanesEnSelect();
-  onPlanChange();
+  // Autocompletar valor según plan seleccionado (sin disparar autoGuardar)
+  const sel = document.getElementById('f-plan');
+  if (sel && sel.value) {
+    const plan = (gymConfig.planes||[]).find(p => p.nombre === sel.value);
+    if (plan) document.getElementById('f-valor').value = plan.precio;
+  }
   setSaveStatus('', 'Sin cambios');
   document.getElementById('modal-cliente').classList.add('open');
 };
