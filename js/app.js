@@ -221,11 +221,27 @@ document.querySelectorAll('.tab').forEach(t => {
 function cargarPlanesEnSelect() {
   const sel = document.getElementById('f-plan');
   if (!sel) return;
+  const planes = gymConfig.planes || [];
+  if (!planes.length) {
+    sel.innerHTML = '<option value="">Cargando planes…</option>';
+    setTimeout(() => {
+      if ((gymConfig.planes || []).length) {
+        cargarPlanesEnSelect();
+      } else if (currentGymId) {
+        db.ref(`gyms/${currentGymId}/config/planes`).once('value').then(snap => {
+          const p = snap.val();
+          if (p && p.length) { gymConfig.planes = p; cargarPlanesEnSelect(); }
+          else sel.innerHTML = '<option value="">Sin planes — ve a Configuración</option>';
+        });
+      }
+    }, 600);
+    return;
+  }
   const currentVal = sel.value;
-  sel.innerHTML = (gymConfig.planes || []).map(p =>
+  sel.innerHTML = planes.map(p =>
     `<option value="${p.nombre}">${p.nombre} — ${fmtCOP(p.precio)}</option>`
   ).join('');
-  if (currentVal) sel.value = currentVal;
+  if (currentVal && planes.find(p => p.nombre === currentVal)) sel.value = currentVal;
 }
 
 window.onPlanChange = function() {
