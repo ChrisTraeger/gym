@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme-retention-additions.css">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -218,7 +219,6 @@
         <button class="sa-tab sa-tab-active" onclick="saTab('estadisticas',this)">📊 Estadísticas</button>
         <button class="sa-tab" onclick="saTab('gyms',this)">🏋️ Gyms</button>
         <button class="sa-tab" onclick="saTab('riesgo',this)">⚠️ En riesgo</button>
-        <!-- ★ NUEVO: pestaña de pagos pendientes -->
         <button class="sa-tab" onclick="saTab('pagos',this)" style="position:relative">
           💳 Pagos
           <span id="sa-pagos-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:10px">!</span>
@@ -273,7 +273,6 @@
         <div id="sa-riesgo-list"></div>
       </div>
 
-      <!-- ★ NUEVO: tab de pagos pendientes -->
       <div id="sa-tab-pagos" style="display:none">
         <div style="font-size:13px;color:var(--muted);margin-bottom:14px">
           Solicitudes de pago enviadas por los gyms. Verifica el comprobante y aprueba o rechaza.
@@ -297,9 +296,9 @@
       <div class="gymid-pill" id="topbar-gymid">@id</div>
     </div>
     <div class="topbar-right">
-      <!-- ★ Plan ahora es clickeable para ver upgrade -->
       <div class="plan-indicator" id="plan-indicator" onclick="mostrarModalPago()" style="cursor:pointer" title="Ver planes">FREE</div>
       <button class="btn-sm btn-outline" id="btn-notif-perm" style="display:none">🔔</button>
+      <!-- ★ BOTÓN TEMA (inyectado por theme-toggle.js, pero reservamos el espacio aquí) -->
       <div class="user-avatar-btn" id="topbar-avatar" onclick="toggleUserMenu()">
         <img id="topbar-avatar-img" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;object-fit:cover;">
         <span id="topbar-avatar-initials"></span>
@@ -321,7 +320,6 @@
     <hr class="menu-divider">
     <button class="menu-item" onclick="irAConfigUsuario()">⚙️ Configuración</button>
     <button class="menu-item" onclick="copiarLinkGym()">🔗 Copiar link del gym</button>
-    <!-- ★ Acceso rápido a planes desde el menú -->
     <button class="menu-item" onclick="toggleUserMenu();mostrarModalPago()">⚡ Ver planes / Renovar</button>
     <hr class="menu-divider">
     <button class="menu-item menu-item-red" onclick="doLogout()">🚪 Cerrar sesión</button>
@@ -333,6 +331,7 @@
     <button class="tab" data-tab="caja">💰 Caja</button>
     <button class="tab" data-tab="alertas">🔔 Alertas</button>
     <button class="tab" data-tab="config">⚙️ Config</button>
+    <!-- ★ La pestaña 📈 Retención se inyecta automáticamente por retencion.js -->
   </div>
 
   <div class="body">
@@ -365,6 +364,7 @@
     <div class="pane" id="pane-config">
       <div id="config-content"></div>
     </div>
+    <!-- ★ El pane de retención se inyecta automáticamente por retencion.js -->
   </div>
 </div>
 
@@ -482,7 +482,7 @@
   </div>
 </div>
 
-<!-- ★ NUEVO: Modal de Pagos/Planes (inyectado por JS, pero el overlay va aquí como fallback) -->
+<!-- Modal Pagos/Planes -->
 <div class="modal-overlay" id="modal-pago" style="display:none">
   <div class="modal-box" style="max-width:520px;max-height:90vh;overflow-y:auto;background:var(--dark2);border-radius:20px;width:calc(100% - 32px)">
     <div id="modal-pago-content"></div>
@@ -492,25 +492,27 @@
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<!-- App scripts -->
 <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/clientes.js"></script>
-  <script src="js/stats-alertas.js"></script>
-  <script src="js/config-caja.js"></script>
-  <script src="js/superadmin.js"></script>
-  <script src="js/pagos-suscripcion.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script src="js/clientes.js"></script>
+<script src="js/stats-alertas.js"></script>
+<script src="js/config-caja.js"></script>
+<script src="js/superadmin.js"></script>
+<script src="js/pagos-suscripcion.js"></script>
+
+<!-- ★ NUEVOS: tema oscuro/claro y retención -->
+<script src="theme-toggle.js"></script>
+<script src="retencion.js"></script>
+
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  }
-</script>
-</body>
-</html>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
