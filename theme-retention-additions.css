@@ -1,0 +1,279 @@
+/* ══════════════════════════════════════════════
+   MODO CLARO — variables que sobreescriben las de :root
+══════════════════════════════════════════════ */
+body.light-mode {
+  --gold:   #B8960C;
+  --gold2:  #D4AF37;
+  --dark:   #f0ede6;
+  --dark2:  #e8e4db;
+  --dark3:  #ffffff;
+  --dark4:  #f5f2eb;
+  --border: #d4cfc4;
+  --text:   #1a1a1a;
+  --muted:  #888880;
+  --green:  #16a34a;
+  --yellow: #ca8a04;
+  --red:    #dc2626;
+}
+
+/* Ajustes puntuales para light mode */
+body.light-mode .landing-bg {
+  background: radial-gradient(ellipse at 50% 0%, #f5ead0 0%, #f0ede6 70%);
+}
+body.light-mode .login-card,
+body.light-mode .lcard,
+body.light-mode .config-card,
+body.light-mode .sa-gym-card,
+body.light-mode .cliente-card,
+body.light-mode .notif-card,
+body.light-mode .pago-card,
+body.light-mode .sa-kpi-card,
+body.light-mode .sa-plan-card,
+body.light-mode .sa-riesgo-card {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+body.light-mode .topbar {
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+body.light-mode .user-menu {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+body.light-mode .btn-google {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+body.light-mode .toast {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+}
+body.light-mode .brand-logo,
+body.light-mode .login-emblem,
+body.light-mode .topbar-logo {
+  filter: drop-shadow(0 0 20px rgba(184,150,12,0.25));
+}
+body.light-mode .modal {
+  box-shadow: 0 -4px 40px rgba(0,0,0,0.15);
+}
+body.light-mode .mcard::before,
+body.light-mode .mcard.green::before,
+body.light-mode .mcard.red::before,
+body.light-mode .mcard.yellow::before {
+  opacity: 0.6;
+}
+
+/* ══ BOTÓN TOGGLE TEMA (topbar) ══ */
+.btn-theme-toggle {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--dark4);
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+.btn-theme-toggle:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  transform: rotate(20deg);
+}
+
+/* ══════════════════════════════════════════════
+   REPORTES DE RETENCIÓN
+══════════════════════════════════════════════ */
+
+/* Tab extra en la barra de pestañas (se añade vía JS) */
+.tab-retencion {}
+
+/* Card de retención general */
+.ret-header {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* Podio top 3 */
+.ret-podio {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 16px 0 0;
+}
+.ret-podio-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.ret-podio-avatar {
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #8B6914);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  color: #0a0a0a;
+  flex-shrink: 0;
+}
+.ret-podio-item:nth-child(1) .ret-podio-avatar { width: 56px; height: 56px; font-size: 22px; }
+.ret-podio-item:nth-child(2) .ret-podio-avatar { width: 46px; height: 46px; font-size: 18px; }
+.ret-podio-item:nth-child(3) .ret-podio-avatar { width: 46px; height: 46px; font-size: 18px; }
+
+.ret-podio-nombre {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  text-align: center; max-width: 80px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ret-podio-meses {
+  font-size: 11px; color: var(--muted);
+}
+.ret-podio-corona {
+  font-size: 20px;
+}
+.ret-podio-medalla {
+  font-size: 16px;
+}
+
+/* Barra de retención por meses */
+.ret-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ret-row {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.ret-row:hover { border-color: var(--gold); }
+.ret-row-avatar {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #8B6914);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 15px; color: #0a0a0a;
+  flex-shrink: 0;
+}
+.ret-row-info { flex: 1; min-width: 0; }
+.ret-row-nombre { font-size: 14px; font-weight: 700; color: var(--text); }
+.ret-row-desde { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.ret-row-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  max-width: 80px;
+}
+.ret-row-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--gold);
+  transition: width 0.6s ease;
+}
+.ret-row-meses {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  color: var(--gold);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Clientes que no renovaron (cancelados) */
+.ret-cancelados { margin-top: 6px; }
+.ret-cancel-row {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.ret-cancel-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(239,68,68,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 14px;
+  color: var(--red);
+  flex-shrink: 0;
+}
+.ret-cancel-info { flex: 1; min-width: 0; }
+.ret-cancel-nombre { font-size: 14px; font-weight: 700; color: var(--text); }
+.ret-cancel-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.ret-cancel-dias {
+  font-size: 12px; font-weight: 700;
+  color: var(--red);
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Segmentos de retención */
+.ret-segmentos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.ret-seg-card {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.ret-seg-card:hover { border-color: var(--gold); }
+.ret-seg-card.active { border-color: var(--gold); background: rgba(212,175,55,0.06); }
+.ret-seg-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.ret-seg-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Sub-tabs dentro de retención */
+.ret-subtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.ret-subtab {
+  background: none; border: none;
+  color: var(--muted);
+  font-family: 'Barlow', sans-serif; font-size: 12px; font-weight: 700;
+  padding: 7px 14px; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.ret-subtab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
