@@ -14,7 +14,22 @@ function mostrarLanding() {
 }
 
 window.mostrarRegistro  = () => { ocultarTodas(); document.getElementById('registro-screen').style.display = 'flex'; };
-window.mostrarSuperAdmin = () => { ocultarTodas(); document.getElementById('superadmin-screen').style.display = 'flex'; };
+window.mostrarSuperAdmin = () => {
+  ocultarTodas();
+  document.getElementById('superadmin-screen').style.display = 'flex';
+  // Siempre arranca mostrando el login (por si quedó abierto el panel de una sesión anterior)
+  const loginWrap = document.getElementById('sa-login-wrap');
+  const panel      = document.getElementById('sa-panel');
+  if (loginWrap) loginWrap.style.display = 'block';
+  if (panel)      panel.style.display = 'none';
+};
+
+// Salir del panel SuperAdmin: cierra la sesión de Google para no dejar
+// una sesión activa que luego pudiera reutilizarse por error.
+window.salirSuperAdmin = function() {
+  auth.signOut().catch(() => {});
+  volverLanding();
+};
 
 window.volverLanding = function() {
   limpiarListenersGym();
@@ -30,6 +45,14 @@ window.volverLanding = function() {
 // ══════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   loadUserPrefs();
+
+  // Acceso al Panel SuperAdmin: solo por URL secreta (ej. tusitio.com/?sa=1),
+  // nunca se muestra ni enlaza desde la pantalla pública.
+  if (new URLSearchParams(window.location.search).has('sa')) {
+    mostrarSuperAdmin();
+    return;
+  }
+
   const gymIdFromURL = getGymIdFromURL();
   if (gymIdFromURL) cargarGymYMostrarLogin(gymIdFromURL);
   else              mostrarLanding();
@@ -113,59 +136,16 @@ const PLANES_DEFAULT = [
   { nombre: 'Trimestral',dias: 90,  precio: 220000 }
 ];
 
-window.registrarGym = function() {
-  const nombre  = document.getElementById('reg-nombre').value.trim();
-  const gymId   = document.getElementById('reg-gymid').value.trim();
-  const tel     = document.getElementById('reg-tel').value.trim();
-  const ciudad  = document.getElementById('reg-ciudad').value.trim();
-  const usuario = document.getElementById('reg-user').value.trim();
-  const pass    = document.getElementById('reg-pass').value;
-  const errEl   = document.getElementById('reg-err');
-  errEl.style.display = 'none';
-
-  if (!nombre || !gymId || !usuario || !pass) { errEl.textContent = '❌ Completa todos los campos obligatorios (*)'; errEl.style.display = 'block'; return; }
-  if (gymId.length < 3) { errEl.textContent = '❌ El ID del gym debe tener al menos 3 caracteres'; errEl.style.display = 'block'; return; }
-  if (pass.length < 4)  { errEl.textContent = '❌ La contraseña debe tener al menos 4 caracteres'; errEl.style.display = 'block'; return; }
-  if (!gymIdDisponible) { errEl.textContent = '❌ Ese ID ya está en uso. Elige otro.'; errEl.style.display = 'block'; return; }
-
-  const btn = document.getElementById('btn-registrar');
-  btn.disabled = true; btn.textContent = '⏳ Creando...';
-
-  const nuevaConfig = { nombre, telefono: tel, ciudad, planes: PLANES_DEFAULT, plan: 'free', creadoEn: Date.now(), activo: true };
-
-  db.ref(`gyms/${gymId}/config`).once('value').then(snap => {
-    if (snap.val()) { errEl.textContent = '❌ Ese ID ya fue tomado. Elige otro.'; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'CREAR MI GYM →'; return; }
-    return db.ref(`gyms/${gymId}`).set({ config: nuevaConfig, creds: { user: usuario, pass }, clientes: {}, pagos: {} });
-  }).then(() => {
-    showToast('✅ ¡Gym creado exitosamente!', 'green');
-    currentGymId = gymId; gymConfig = nuevaConfig;
-    setGymIdInURL(gymId);
-    setTimeout(() => mostrarLoginGym(), 1200);
-  }).catch(e => { errEl.textContent = '❌ Error: ' + e.message; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'CREAR MI GYM →'; });
-};
-
-document.getElementById('btn-google-reg').addEventListener('click', () => {
-  const gymId  = document.getElementById('reg-gymid').value.trim();
-  const nombre = document.getElementById('reg-nombre').value.trim();
-  const errEl  = document.getElementById('reg-err');
-  if (!nombre || !gymId) { errEl.textContent = '❌ Primero completa el nombre y el ID del gym'; errEl.style.display = 'block'; return; }
-  if (!gymIdDisponible)  { errEl.textContent = '❌ Verifica que el ID esté disponible'; errEl.style.display = 'block'; return; }
-  const provider = new firebase.auth.GoogleAuthProvider();
-  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    db.ref('_pendingRegs/pendingReg_' + gymId).set({ gymId, nombre, ts: Date.now() })
-      .then(() => auth.signInWithRedirect(provider));
-  } else {
-    auth.signInWithPopup(provider).then(r => crearGymConGoogleUser(r.user, gymId, nombre))
-      .catch(e => { if (e.code !== 'auth/popup-closed-by-user') { errEl.textContent = '❌ Error Google: ' + e.message; errEl.style.display = 'block'; } });
-  }
-});
+// El registro de un nuevo gym se hace únicamente con cuenta de Google
+// (ver crearGymConGoogleUser más abajo). Ya no existe registro manual
+// con usuario/contraseña.
 
 function crearGymConGoogleUser(user, gymId, nombre) {
   const config = { nombre, telefono: '', ciudad: '', planes: PLANES_DEFAULT, plan: 'free', creadoEn: Date.now(), activo: true };
   db.ref(`gyms/${gymId}`).set({
     config,
-    creds: { user: user.email, pass: '' },
-    usuarios: { [user.uid]: { nombre: user.displayName, email: user.email, rol: 'admin' } },
+    creds: { user: user.email || '', pass: '' },
+    usuarios: { [user.uid]: { nombre: user.displayName || '', email: user.email || '', telefono: user.phoneNumber || '', rol: 'admin' } },
     clientes: {}, pagos: {}
   }).then(() => {
     currentGymId = gymId; gymConfig = config;
@@ -241,6 +221,12 @@ auth.getRedirectResult().then(result => {
       sessionStorage.removeItem('pendingGymReg');
       const { gymId, nombre } = JSON.parse(pending);
       crearGymConGoogleUser(result.user, gymId, nombre);
+      return;
+    }
+    const pendingSA = sessionStorage.getItem('pendingSuperAdminLogin');
+    if (pendingSA) {
+      sessionStorage.removeItem('pendingSuperAdminLogin');
+      if (typeof handleSuperAdminAuthResult === 'function') handleSuperAdminAuthResult(result.user);
       return;
     }
     if (currentGymId) {

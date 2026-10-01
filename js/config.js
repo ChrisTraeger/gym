@@ -17,9 +17,16 @@ const auth = firebase.auth();
 
 // ══════════════════════════════════════════════
 // SUPERADMIN CONFIG
+// Solo las cuentas de Google en esta lista pueden entrar al Panel
+// SuperAdmin. Reemplaza el correo de ejemplo por tu(s) Gmail real(es).
+// IMPORTANTE: esto solo oculta/filtra el acceso desde la interfaz.
+// Para una seguridad real, configura también las Reglas de seguridad
+// de Firebase Realtime Database para que solo estos UID/emails puedan
+// leer y escribir en el nodo raíz "gyms".
 // ══════════════════════════════════════════════
-const SA_USER = 'superadmin';
-const SA_PASS = 'superadmin2024';
+const SUPERADMIN_EMAILS = [
+  'tu-correo@gmail.com'
+];
 
 // ══════════════════════════════════════════════
 // ESTADO GLOBAL

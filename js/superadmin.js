@@ -1,19 +1,54 @@
 // ══════════════════════════════════════════════
 // SUPER ADMIN
 // ══════════════════════════════════════════════
-window.loginSuperAdmin = function() {
-  const user  = document.getElementById('sa-user').value.trim();
-  const pass  = document.getElementById('sa-pass').value;
-  const errEl = document.getElementById('sa-err');
-  if (user !== SA_USER || pass !== SA_PASS) {
-    errEl.style.display = 'block';
-    setTimeout(() => errEl.style.display = 'none', 3000);
+window.loginSuperAdminGoogle = function() {
+  const btn = document.getElementById('btn-google-sa');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Conectando…'; }
+  const provider   = new firebase.auth.GoogleAuthProvider();
+  const isMobileSA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isMobileSA) {
+    sessionStorage.setItem('pendingSuperAdminLogin', '1');
+    auth.signInWithRedirect(provider).catch(() => {
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Continuar con Google'; }
+    });
+  } else {
+    auth.signInWithPopup(provider).then(result => handleSuperAdminAuthResult(result.user))
+      .catch(e => {
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Continuar con Google'; }
+        if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+          _saErr('❌ Error de Google: ' + e.message);
+        }
+      });
+  }
+};
+
+// Se llama tras un login de Google exitoso (desde popup o desde redirect en móvil).
+// Verifica que el correo esté en la lista SUPERADMIN_EMAILS antes de dar acceso.
+window.handleSuperAdminAuthResult = function(user) {
+  const correo     = (user.email || '').toLowerCase();
+  const autorizado = SUPERADMIN_EMAILS.map(e => e.toLowerCase()).includes(correo);
+
+  if (!autorizado) {
+    auth.signOut().catch(() => {});
+    const btn = document.getElementById('btn-google-sa');
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Continuar con Google'; }
+    _saErr(`❌ La cuenta ${user.email} no tiene permisos de SuperAdmin`);
     return;
   }
+
   document.getElementById('sa-login-wrap').style.display = 'none';
   document.getElementById('sa-panel').style.display = 'block';
   cargarPanelSA();
 };
+
+function _saErr(msg) {
+  const errEl = document.getElementById('sa-err');
+  if (!errEl) return;
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+  setTimeout(() => errEl.style.display = 'none', 4500);
+}
 
 let _saGymsCache = [];
 
