@@ -10,6 +10,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme-retention-additions.css">
+  <link rel="stylesheet" href="landing.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -19,42 +21,39 @@
      LANDING / SELECTOR DE GYM
 ══════════════════════════════════════════════ -->
 <div id="landing-screen">
-  <div class="landing-bg"></div>
-  <div class="landing-content">
-    <div class="brand-logo">GYMPANEL</div>
-    <div class="brand-tagline">Software de gestión para gimnasios</div>
+  <div class="lp">
+    <header class="lp-top"><span class="lp-logo">gympanel</span></header>
+    <main class="lp-main">
+      <section class="lp-hero">
+        <h1>Sabe quién pagó, quién vence hoy y a quién escribirle.</h1>
+        <p>Clientes, mensualidades y avisos por WhatsApp de tu gimnasio en un solo panel.</p>
+        <div class="lp-board" aria-hidden="true">
+          <div class="lp-row"><i>CR</i><b>Camila R.</b><span>Mensual</span><em class="hoy">Vence hoy</em></div>
+          <div class="lp-row"><i>AM</i><b>Andrés M.</b><span>Trimestral</span><em class="ok">Al día</em></div>
+          <div class="lp-row"><i>LP</i><b>Laura P.</b><span>Quincenal</span><em class="venc">Vencido 9 días</em></div>
+        </div>
+      </section>
 
-    <div class="landing-cards">
-
-      <!-- ACCEDER A GYM EXISTENTE -->
-      <div class="lcard">
-        <div class="lcard-icon">🔐</div>
-        <div class="lcard-title">Acceder a mi Gym</div>
-        <div class="lcard-desc">¿Ya tienes una cuenta? Ingresa el ID de tu gimnasio para continuar.</div>
-        <div class="field-wrap" style="margin-top:16px">
-          <label class="field-label">ID de tu Gimnasio</label>
+      <section class="lp-card">
+        <div class="lp-tabs" role="tablist">
+          <button class="on" id="lp-t1" onclick="lpTab(1)">Entrar</button>
+          <button id="lp-t2" onclick="lpTab(2)">Crear cuenta</button>
+        </div>
+        <div id="lp-p1">
+          <label class="field-label" for="inp-gym-id">ID de tu gimnasio</label>
           <input id="inp-gym-id" class="inp" type="text" placeholder="ej: powerfit-medellin"
             autocorrect="off" autocapitalize="off" spellcheck="false"
             oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+          <button class="lp-btn" onclick="irAlGym()">Entrar a mi gimnasio</button>
+          <div id="gym-not-found-err" class="login-err">No encontramos ese gimnasio</div>
         </div>
-        <button class="btn-gold" onclick="irAlGym()" style="margin-top:12px">ENTRAR →</button>
-        <div id="gym-not-found-err" class="login-err">❌ Gimnasio no encontrado</div>
-      </div>
-
-      <!-- REGISTRAR NUEVO GYM -->
-      <div class="lcard lcard-register">
-        <div class="lcard-icon">🏋️</div>
-        <div class="lcard-title">Registrar mi Gym</div>
-        <div class="lcard-desc">Crea tu cuenta gratis en menos de 1 minuto. Sin tarjeta requerida.</div>
-        <button class="btn-gold btn-outline-gold" onclick="mostrarRegistro()" style="margin-top:16px">CREAR CUENTA GRATIS →</button>
-        <div class="plan-badges">
-          <span class="plan-badge">✅ Gratis para siempre</span>
-          <span class="plan-badge">✅ Hasta 30 clientes</span>
-          <span class="plan-badge">✅ Sin contratos</span>
+        <div id="lp-p2" style="display:none">
+          <p class="lp-note">Usa tu celular o tu correo. Te enviamos un código de 6 dígitos para confirmar.</p>
+          <button class="lp-btn" onclick="mostrarRegistro()">Crear cuenta gratis</button>
+          <ul class="lp-facts"><li>Gratis hasta 30 clientes</li><li>Sin tarjeta</li><li>Sin contratos</li></ul>
         </div>
-      </div>
-
-    </div>
+      </section>
+    </main>
   </div>
 </div>
 
@@ -65,54 +64,46 @@
   <div class="landing-bg"></div>
   <div class="auth-wrap">
     <button class="back-btn" onclick="volverLanding()">← Volver</button>
-    <div class="brand-logo" style="font-size:36px;margin-bottom:4px">GYMPANEL</div>
-    <div class="brand-tagline" style="margin-bottom:32px">Crea tu cuenta</div>
-
+    <div class="lp-logo" style="font-size:28px;margin-bottom:20px">gympanel</div>
     <div class="login-card" style="max-width:420px">
-      <div class="login-title">🏋️ Registro de Gimnasio</div>
-      <div class="login-hint">Completa los datos para crear tu panel</div>
+      <div class="login-title" id="otp-title">Crea tu gimnasio</div>
 
-      <div class="field-wrap">
-        <label class="field-label">Nombre del Gimnasio *</label>
-        <input id="reg-nombre" class="inp" type="text" placeholder="Ej: PowerFit Gym"
-          oninput="generarGymId()">
-      </div>
-
-      <div class="field-wrap">
-        <label class="field-label">ID del Gimnasio * <span style="color:var(--muted);font-weight:400">(URL de acceso)</span></label>
-        <div style="position:relative">
-          <input id="reg-gymid" class="inp" type="text" placeholder="powerfit-gym"
-            autocorrect="off" autocapitalize="off" spellcheck="false"
-            oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'');verificarGymId()">
-          <span id="gymid-check" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px"></span>
-        </div>
-        <div id="gymid-hint" style="font-size:11px;color:var(--muted);margin-top:4px">
-          Tu URL será: <span id="gymid-preview" style="color:var(--gold)">gympanel.app/<b>tu-id</b></span>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div id="otp-s1">
         <div class="field-wrap">
-          <label class="field-label">Teléfono / WhatsApp</label>
-          <input id="reg-tel" class="inp" type="tel" placeholder="3001234567">
+          <label class="field-label">Nombre del gimnasio</label>
+          <input id="reg-nombre" class="inp" type="text" placeholder="Ej: PowerFit Gym" oninput="generarGymId()">
         </div>
         <div class="field-wrap">
-          <label class="field-label">Ciudad</label>
-          <input id="reg-ciudad" class="inp" type="text" placeholder="Medellín">
+          <label class="field-label">ID del gimnasio <span style="color:var(--muted);font-weight:400">(con este entras)</span></label>
+          <div style="position:relative">
+            <input id="reg-gymid" class="inp" type="text" placeholder="powerfit-gym" autocorrect="off" autocapitalize="off" spellcheck="false"
+              oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'');verificarGymId()">
+            <span id="gymid-check" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px"></span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Tu enlace: <span id="gymid-preview" style="color:var(--gold)">gympanel.app/<b>tu-id</b></span></div>
         </div>
+        <button class="lp-btn" onclick="otpPaso1()">Continuar</button>
+      </div>
+
+      <div id="otp-s2" style="display:none">
+        <div class="lp-tabs"><button class="on" id="otp-mt" onclick="otpMetodo('tel')">Celular</button><button id="otp-mm" onclick="otpMetodo('mail')">Correo</button></div>
+        <div class="field-wrap">
+          <label class="field-label" id="otp-lbl">Número de celular</label>
+          <input id="otp-dest" class="inp" type="tel" placeholder="+57 300 123 4567" autocomplete="off">
+        </div>
+        <button class="lp-btn" id="otp-send" onclick="otpEnviar()">Enviar código</button>
+      </div>
+
+      <div id="otp-s3" style="display:none">
+        <p class="lp-note" id="otp-info"></p>
+        <input id="otp-code" class="inp otp-code" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code"
+          oninput="this.value=this.value.replace(/\D/g,'');if(this.value.length===6)otpVerificar()">
+        <button class="lp-btn" onclick="otpVerificar()">Verificar y continuar</button>
+        <button class="lp-link" onclick="otpPaso(2)">Cambiar número o correo</button>
       </div>
 
       <div id="reg-err" class="login-err"></div>
-
-      <div style="margin-top:16px;text-align:center">
-        <button class="btn-google" id="btn-google-reg">
-          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.2 30.2 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.9 6.1C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.6h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-8.1 6.2C6.7 42.6 14.7 48 24 48z"/></svg>
-          Registrar con Google
-        </button>
-        <div style="font-size:11px;color:var(--muted);margin-top:10px">
-          El registro se hace únicamente con tu cuenta de Google.
-        </div>
-      </div>
+      <div id="otp-recaptcha"></div>
     </div>
   </div>
 </div>
@@ -136,6 +127,8 @@
         <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.7 2.2 30.2 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.9 6.1C12.4 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.6h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-8.1 6.2C6.7 42.6 14.7 48 24 48z"/></svg>
         Continuar con Google
       </button>
+
+      <button class="btn-google" onclick="abrirOtpLogin()" style="margin-top:8px">Entrar con celular o correo</button>
 
       <div class="login-divider"><span>o ingresa manualmente</span></div>
 
@@ -471,11 +464,13 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
 <!-- App scripts -->
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/registro-otp.js"></script>
 <script src="js/app.js"></script>
 <script src="js/clientes.js"></script>
 <script src="js/stats-alertas.js"></script>
