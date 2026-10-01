@@ -139,28 +139,13 @@ const PLANES_DEFAULT = [
 // El registro de un nuevo gym se hace únicamente con cuenta de Google
 // (ver crearGymConGoogleUser más abajo). Ya no existe registro manual
 // con usuario/contraseña.
-document.getElementById('btn-google-reg').addEventListener('click', () => {
-  const gymId  = document.getElementById('reg-gymid').value.trim();
-  const nombre = document.getElementById('reg-nombre').value.trim();
-  const errEl  = document.getElementById('reg-err');
-  if (!nombre || !gymId) { errEl.textContent = '❌ Primero completa el nombre y el ID del gym'; errEl.style.display = 'block'; return; }
-  if (!gymIdDisponible)  { errEl.textContent = '❌ Verifica que el ID esté disponible'; errEl.style.display = 'block'; return; }
-  const provider = new firebase.auth.GoogleAuthProvider();
-  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    db.ref('_pendingRegs/pendingReg_' + gymId).set({ gymId, nombre, ts: Date.now() })
-      .then(() => auth.signInWithRedirect(provider));
-  } else {
-    auth.signInWithPopup(provider).then(r => crearGymConGoogleUser(r.user, gymId, nombre))
-      .catch(e => { if (e.code !== 'auth/popup-closed-by-user') { errEl.textContent = '❌ Error Google: ' + e.message; errEl.style.display = 'block'; } });
-  }
-});
 
 function crearGymConGoogleUser(user, gymId, nombre) {
   const config = { nombre, telefono: '', ciudad: '', planes: PLANES_DEFAULT, plan: 'free', creadoEn: Date.now(), activo: true };
   db.ref(`gyms/${gymId}`).set({
     config,
-    creds: { user: user.email, pass: '' },
-    usuarios: { [user.uid]: { nombre: user.displayName, email: user.email, rol: 'admin' } },
+    creds: { user: user.email || '', pass: '' },
+    usuarios: { [user.uid]: { nombre: user.displayName || '', email: user.email || '', telefono: user.phoneNumber || '', rol: 'admin' } },
     clientes: {}, pagos: {}
   }).then(() => {
     currentGymId = gymId; gymConfig = config;
