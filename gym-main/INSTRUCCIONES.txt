@@ -1,0 +1,54 @@
+# INSTRUCCIONES DE INTEGRACIÓN
+# ─────────────────────────────────────────────
+# Dos funcionalidades nuevas:
+#   1. Modo oscuro / claro (toggle ☀️🌙)
+#   2. Tab de Reportes de Retención 📈
+# ─────────────────────────────────────────────
+
+## PASO 1 — Agregar el CSS (theme-retention-additions.css)
+
+En index.html, ANTES de cerrar </head>, agrega:
+
+    <link rel="stylesheet" href="theme-retention-additions.css">
+
+
+## PASO 2 — Agregar los scripts (al final de <body>, DESPUÉS de los demás <script>)
+
+    <script src="js/theme-toggle.js"></script>
+    <script src="js/retencion.js"></script>
+
+Mueve los dos archivos .js a tu carpeta js/:
+  - theme-toggle.js  →  js/theme-toggle.js
+  - retencion.js     →  js/retencion.js
+
+
+## PASO 3 — Parche en entrarAlApp() (js/app.js)
+# Si el interceptor automático no funciona, agrega al final de entrarAlApp():
+
+    // Al final de entrarAlApp(), ANTES del cierre }
+    setTimeout(() => {
+      if (typeof inyectarTabRetencion === 'function') inyectarTabRetencion();
+      if (typeof inyectarPaneRetencion === 'function') inyectarPaneRetencion();
+    }, 300);
+
+
+## PASO 4 — (Opcional) Mejorar registradoEn en nuevos clientes
+# En js/clientes.js, la función _ejecutarGuardado ya pone registradoEn: Date.now()
+# Eso es suficiente. Para clientes sin registradoEn, el sistema usa fechaInicio como fallback.
+
+
+## ¿QUÉ HACE CADA COSA?
+
+### Modo oscuro/claro
+- Botón ☀️ / 🌙 en el topbar (junto al avatar)
+- Paleta clara cuidadosamente ajustada para legibilidad
+- Preferencia guardada en localStorage
+- El icono del botón cambia automáticamente
+
+### Reportes de Retención (nueva pestaña 📈)
+- 4 KPIs: tasa de retención %, antigüedad media, activos totales, posibles bajas
+- Sub-tab "Top clientes": ranking con podio 🥇🥈🥉 y barra de progreso
+- Sub-tab "Segmentos": distribución por antigüedad (< 1m, 1-3m, 3-6m, 6-12m, 1+ año)
+- Sub-tab "Sin renovar": clientes vencidos +7 días con indicador de riesgo (Bajo/Medio/Alto)
+  y botón de WhatsApp individual + masivo
+- Clic en cualquier cliente abre el modal de detalle existente
