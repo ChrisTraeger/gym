@@ -1,6 +1,6 @@
 // Registro / acceso con código: celular (SMS, Firebase Auth) o correo (Cloud Functions).
 let otpModo = 'registro', otpMet = 'tel', otpConf = null, otpRecaptcha = null, otpEmail = '';
- 
+
 window.lpTab = n => {
   document.getElementById('lp-p1').style.display = n === 1 ? 'block' : 'none';
   document.getElementById('lp-p2').style.display = n === 2 ? 'block' : 'none';
@@ -9,7 +9,7 @@ window.lpTab = n => {
 };
 const otpErr = m => { const e = document.getElementById('reg-err'); e.textContent = m; e.style.display = m ? 'block' : 'none'; };
 window.otpPaso = n => { [1,2,3].forEach(i => document.getElementById('otp-s'+i).style.display = i === n ? 'block' : 'none'); otpErr(''); };
- 
+
 // Sobrescribe el registro: ahora arranca en el paso del nombre/ID
 window.mostrarRegistro = () => {
   otpModo = 'registro'; ocultarTodas();
@@ -27,13 +27,18 @@ window.otpPaso1 = () => {
   if (!gymIdDisponible) return otpErr('Ese ID ya está en uso. Prueba con otro');
   otpPaso(2);
 };
+// País por defecto según el idioma del navegador (si no, Colombia)
+(() => { const r = ((navigator.language || '').split('-')[1] || '').toUpperCase(), sel = document.getElementById('otp-pais');
+  sel.value = [...sel.options].some(o => o.value === r) ? r : 'CO'; })();
+
 window.otpMetodo = m => {
   otpMet = m;
   document.getElementById('otp-mt').classList.toggle('on', m === 'tel');
   document.getElementById('otp-mm').classList.toggle('on', m === 'mail');
   const d = document.getElementById('otp-dest');
   d.type = m === 'tel' ? 'tel' : 'email'; d.value = '';
-  d.placeholder = m === 'tel' ? '+57 300 123 4567' : 'tu@correo.com';
+  document.getElementById('otp-pais').style.display = m === 'tel' ? 'block' : 'none';
+  d.placeholder = m === 'tel' ? '300 123 4567' : 'tu@correo.com';
   document.getElementById('otp-lbl').textContent = m === 'tel' ? 'Número de celular' : 'Correo electrónico';
   document.getElementById('otp-send').textContent = m === 'tel' ? 'Enviar código' : 'Enviar enlace';
 };
@@ -42,7 +47,9 @@ window.otpEnviar = async () => {
   otpErr(''); btn.disabled = true;
   try {
     if (otpMet === 'tel') {
-      let tel = v.replace(/[\s()-]/g, ''); if (!tel.startsWith('+')) tel = '+57' + tel;
+      const cc = document.getElementById('otp-pais').selectedOptions[0].dataset.cc;
+      let tel = v.replace(/[\s()-]/g, '');
+      if (!tel.startsWith('+')) tel = '+' + cc + tel.replace(/^0+/, '');
       if (!/^\+\d{10,15}$/.test(tel)) throw { message: 'Revisa el número de celular' };
       if (!otpRecaptcha) otpRecaptcha = new firebase.auth.RecaptchaVerifier('otp-recaptcha', { size: 'invisible' });
       otpConf = await auth.signInWithPhoneNumber(tel, otpRecaptcha);
@@ -72,7 +79,7 @@ window.otpVerificar = async () => {
     await otpFinalizar(user, otpModo, document.getElementById('reg-gymid').value.trim(), document.getElementById('reg-nombre').value.trim());
   } catch (e) { otpErr('Código incorrecto o vencido'); }
 };
- 
+
 async function otpFinalizar(user, modo, gymId, nombre) {
   if (modo === 'registro') return crearGymConGoogleUser(user, gymId, nombre);
   const gid = gymId || currentGymId || getGymIdFromURL();
@@ -83,7 +90,7 @@ async function otpFinalizar(user, modo, gymId, nombre) {
     entrarAlApp();
   } else { await auth.signOut(); otpErr('Esta cuenta no tiene acceso a ese gimnasio. Primero escribe su ID en el inicio.'); }
 }
- 
+
 // Al volver desde el enlace del correo
 if (auth.isSignInWithEmailLink(location.href)) {
   const p = JSON.parse(localStorage.getItem('otpPending') || 'null');
@@ -96,4 +103,3 @@ if (auth.isSignInWithEmailLink(location.href)) {
     await otpFinalizar(r.user, p.modo, p.gymId, p.nombre);
   }).catch(() => alert('El enlace venció o ya se usó. Pide uno nuevo.'));
 }
- 
