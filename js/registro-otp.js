@@ -1,5 +1,5 @@
 // Registro / acceso con código: celular (SMS, Firebase Auth) o correo (Cloud Functions).
-let otpModo = 'registro', otpMet = 'tel', otpConf = null, otpRecaptcha = null, otpEmail = '';
+let otpTelUsado = '', otpModo = 'registro', otpMet = 'tel', otpConf = null, otpRecaptcha = null, otpEmail = '';
 
 window.lpTab = n => {
   document.getElementById('lp-p1').style.display = n === 1 ? 'block' : 'none';
@@ -42,6 +42,13 @@ window.otpMetodo = m => {
   document.getElementById('otp-lbl').textContent = m === 'tel' ? 'Número de celular' : 'Correo electrónico';
   document.getElementById('otp-send').textContent = m === 'tel' ? 'Enviar código' : 'Enviar enlace';
 };
+// Limpia el reCAPTCHA anterior y deja un contenedor nuevo y vacío
+function otpResetRecaptcha() {
+  try { if (otpRecaptcha) otpRecaptcha.clear(); } catch (_) {}
+  otpRecaptcha = null;
+  const old = document.getElementById('otp-recaptcha'), nuevo = document.createElement('div');
+  nuevo.id = 'otp-recaptcha'; old.replaceWith(nuevo);
+}
 window.otpEnviar = async () => {
   const btn = document.getElementById('otp-send'), v = document.getElementById('otp-dest').value.trim();
   otpErr(''); btn.disabled = true;
@@ -50,8 +57,10 @@ window.otpEnviar = async () => {
       const cc = document.getElementById('otp-pais').selectedOptions[0].dataset.cc;
       let tel = v.replace(/[\s()-]/g, '');
       if (!tel.startsWith('+')) tel = '+' + cc + tel.replace(/^0+/, '');
+      otpTelUsado = tel;
       if (!/^\+\d{10,15}$/.test(tel)) throw { message: 'Revisa el número de celular' };
-      if (!otpRecaptcha) otpRecaptcha = new firebase.auth.RecaptchaVerifier('otp-recaptcha', { size: 'invisible' });
+      otpResetRecaptcha();
+      otpRecaptcha = new firebase.auth.RecaptchaVerifier('otp-recaptcha', { size: 'invisible' });
       otpConf = await auth.signInWithPhoneNumber(tel, otpRecaptcha);
       document.getElementById('otp-info').textContent = 'Enviamos un código por SMS a ' + tel;
     } else {
@@ -68,7 +77,7 @@ window.otpEnviar = async () => {
     document.getElementById('otp-code').style.display = esMail ? 'none' : 'block';
     document.querySelector('#otp-s3 .lp-btn').style.display = esMail ? 'none' : 'block';
     otpPaso(3); if (otpMet === 'tel') document.getElementById('otp-code').focus();
-  } catch (e) { otpErr('No se pudo enviar: ' + (e.message || 'intenta de nuevo')); if (otpRecaptcha) { otpRecaptcha.clear(); otpRecaptcha = null; } }
+  } catch (e) { otpResetRecaptcha(); otpErr('No se pudo enviar' + (otpMet === 'tel' && otpTelUsado ? ' a ' + otpTelUsado : '') + ': ' + (e.message || 'intenta de nuevo')); }
   btn.disabled = false;
 };
 window.otpVerificar = async () => {
